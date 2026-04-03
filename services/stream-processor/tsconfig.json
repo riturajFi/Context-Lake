@@ -11,6 +11,8 @@
     { "path": "../../packages/shared-config" },
     { "path": "../../packages/shared-db" },
     { "path": "../../packages/shared-events" },
-    { "path": "../../packages/shared-logging" }
+    { "path": "../../packages/shared-http" },
+    { "path": "../../packages/shared-logging" },
+    { "path": "../../packages/shared-observability" }
   ]
 }

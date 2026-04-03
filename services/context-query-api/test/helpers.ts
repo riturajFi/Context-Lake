@@ -27,6 +27,7 @@ export async function createContextQueryTestDatabase() {
     '002_ingestion_resource_links.sql',
     '003_projection_views.sql',
     '004_context_query_indexes.sql',
+    '005_audit_and_traceability.sql',
   ]) {
     let sql = await readFile(path.join(sourceDirectory, file), 'utf8');
 

@@ -1,6 +1,7 @@
 import { Kafka, type Admin, type Consumer, logLevel } from 'kafkajs';
 import { validateEventEnvelope } from '@context-lake/shared-events';
 import { createLogger } from '@context-lake/shared-logging';
+import { withActiveSpan } from '@context-lake/shared-observability';
 
 import { ProjectionMetrics } from './metrics.js';
 import { ProjectionApplier } from './projections.js';
@@ -70,13 +71,23 @@ export class KafkaProjectionConsumer implements ProjectionConsumerRuntime {
     try {
       const parsed = JSON.parse(message.value) as Record<string, unknown>;
       const event = validateEventEnvelope(parsed);
-      const result = await this.options.applier.apply({
-        consumerName: this.options.consumerName,
-        topic: message.topic,
-        partition: message.partition,
-        offset: message.offset,
-        event,
-      });
+      const result = await withActiveSpan(
+        'stream-processor',
+        `projection.${event.event_type}`,
+        {
+          trace_id: event.trace_id,
+          tenant_id: event.tenant_id,
+          request_id: event.request_id,
+        },
+        () =>
+          this.options.applier.apply({
+            consumerName: this.options.consumerName,
+            topic: message.topic,
+            partition: message.partition,
+            offset: message.offset,
+            event,
+          }),
+      );
 
       this.options.metrics.setProjectionUpdateLatencyMs(Date.now() - start);
       this.options.logger.info(

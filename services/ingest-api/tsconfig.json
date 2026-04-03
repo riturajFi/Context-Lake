@@ -13,6 +13,7 @@
     { "path": "../../packages/shared-events" },
     { "path": "../../packages/shared-http" },
     { "path": "../../packages/shared-logging" },
+    { "path": "../../packages/shared-observability" },
     { "path": "../../packages/shared-types" }
   ]
 }

@@ -8,7 +8,21 @@ import {
 } from '@context-lake/shared-config';
 import { createDbPool, createRepositoryContext } from '@context-lake/shared-db';
 import { createKafkaEventPublisher } from '@context-lake/shared-events';
-import { createHttpApp } from '@context-lake/shared-http';
+import {
+  createHttpApp,
+  formatApiError,
+  isGovernanceError,
+  parseApiAuthTokens,
+  registerApiGovernance,
+  registerPrometheusEndpoint,
+} from '@context-lake/shared-http';
+import {
+  Counter,
+  Gauge,
+  Histogram,
+  createMetricsRegistry,
+  withActiveSpan,
+} from '@context-lake/shared-observability';
 import type { HealthStatus } from '@context-lake/shared-types';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -23,7 +37,6 @@ import { ApiError } from './errors.js';
 import { IngestionMetrics } from './metrics.js';
 import { OutboxRelay } from './relay.js';
 import { IngestService } from './service.js';
-import { buildTraceContext } from './tracing.js';
 
 export const ingestApiConfigSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3001),
@@ -31,6 +44,9 @@ export const ingestApiConfigSchema = z.object({
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
   OUTBOX_BATCH_SIZE: z.coerce.number().int().positive().default(25),
   OUTBOX_MAX_RETRY_DELAY_SECONDS: z.coerce.number().int().positive().default(60),
+  API_AUTH_TOKENS_JSON: z.string().min(2),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
 });
 
 export type IngestApiConfig = ReturnType<typeof loadIngestApiConfig>;
@@ -45,6 +61,26 @@ export async function createIngestApp(config = loadIngestApiConfig()) {
     logLevel: config.LOG_LEVEL,
   });
   const metrics = new IngestionMetrics();
+  const registry = createMetricsRegistry('ingest-api');
+  const requestDurationMs = new Histogram({
+    name: 'ingest_api_request_duration_ms',
+    help: 'Ingest API request duration in milliseconds.',
+    labelNames: ['route', 'method', 'status_code'],
+    buckets: [5, 15, 50, 100, 250, 500, 1000, 3000],
+    registers: [registry],
+  });
+  const requestTotal = new Counter({
+    name: 'ingest_api_requests_total',
+    help: 'Total ingest API requests.',
+    labelNames: ['route', 'method', 'status_code'],
+    registers: [registry],
+  });
+  const dbPoolConnections = new Gauge({
+    name: 'ingest_api_db_pool_connections',
+    help: 'Database pool connections by state.',
+    labelNames: ['state'],
+    registers: [registry],
+  });
   const pool = createDbPool(config.POSTGRES_URL);
   const publisher = await createKafkaEventPublisher({
     clientId: 'context-lake-ingest-api',
@@ -63,6 +99,64 @@ export async function createIngestApp(config = loadIngestApiConfig()) {
     pool,
     logger: app.log,
     metrics,
+  });
+  registerApiGovernance(app, {
+    authTokens: parseApiAuthTokens(config.API_AUTH_TOKENS_JSON),
+    rateLimitWindowMs: config.RATE_LIMIT_WINDOW_MS,
+    rateLimitMaxRequests: config.RATE_LIMIT_MAX_REQUESTS,
+  });
+  registerPrometheusEndpoint(app, registry);
+
+  app.setErrorHandler((error, request, reply) => {
+    if (isGovernanceError(error)) {
+      metrics.incrementAuthFailures();
+      reply.code(error.statusCode);
+      return reply.send(formatApiError(request.id, error.code, error.message));
+    }
+
+    if (error instanceof z.ZodError) {
+      reply.code(400);
+      return reply.send(
+        formatApiError(
+          request.id,
+          'VALIDATION_ERROR',
+          error.issues.map((issue) => issue.message).join('; '),
+        ),
+      );
+    }
+
+    if (error instanceof ApiError) {
+      reply.code(error.statusCode);
+      return reply.send(formatApiError(request.id, error.code, error.message));
+    }
+
+    reply.code(500);
+    return reply.send(formatApiError(request.id, 'INTERNAL_ERROR', 'internal server error'));
+  });
+
+  app.addHook('onResponse', async (request, reply) => {
+    const startedAt = (request as FastifyRequest & { contextStartedAtMs?: number }).contextStartedAtMs;
+    if (!startedAt) {
+      return;
+    }
+
+    const durationMs = Date.now() - startedAt;
+    requestDurationMs.observe(
+      {
+        route: request.routeOptions.url,
+        method: request.method,
+        status_code: String(reply.statusCode),
+      },
+      durationMs,
+    );
+    requestTotal.inc({
+      route: request.routeOptions.url,
+      method: request.method,
+      status_code: String(reply.statusCode),
+    });
+    dbPoolConnections.set({ state: 'total' }, pool.totalCount);
+    dbPoolConnections.set({ state: 'idle' }, pool.idleCount);
+    dbPoolConnections.set({ state: 'waiting' }, pool.waitingCount);
   });
 
   async function getDependencyChecks() {
@@ -91,22 +185,16 @@ export async function createIngestApp(config = loadIngestApiConfig()) {
   }
 
   function getHeaders(request: FastifyRequest) {
-    const tenantHeader = request.headers['x-tenant-id'];
     const idempotencyHeader = request.headers['idempotency-key'];
-    const actorHeader = request.headers['x-actor-id'];
-
-    if (!tenantHeader) {
-      throw new ApiError(400, 'MISSING_TENANT_ID', 'x-tenant-id header is required');
-    }
 
     if (!idempotencyHeader) {
       throw new ApiError(400, 'MISSING_IDEMPOTENCY_KEY', 'idempotency-key header is required');
     }
 
     return {
-      tenantId: tenantHeaderSchema.parse(tenantHeader),
+      tenantId: tenantHeaderSchema.parse(request.contextLake.tenantId),
       idempotencyKey: idempotencyHeaderSchema.parse(idempotencyHeader),
-      actorId: actorHeader ? z.string().uuid().parse(actorHeader) : undefined,
+      actorId: request.contextLake.actorId,
     };
   }
 
@@ -128,14 +216,23 @@ export async function createIngestApp(config = loadIngestApiConfig()) {
     try {
       const headers = getHeaders(request);
       const payload = customerIngestRequestSchema.parse(request.body);
-      const trace = buildTraceContext(request.id, headers.tenantId);
-      const result = await service.ingestCustomer(payload, {
-        tenantId: headers.tenantId,
-        traceId: trace.traceId,
-        idempotencyKey: headers.idempotencyKey,
-        actorId: headers.actorId,
-        source: 'ingest-api',
-      });
+      const result = await withActiveSpan(
+        'ingest-api',
+        'ingest.customer',
+        {
+          tenant_id: headers.tenantId,
+          trace_id: request.contextLake.traceId,
+        },
+        () =>
+          service.ingestCustomer(payload, {
+            tenantId: headers.tenantId,
+            traceId: request.contextLake.traceId,
+            requestId: request.contextLake.requestId,
+            idempotencyKey: headers.idempotencyKey,
+            actorId: headers.actorId,
+            source: 'ingest-api',
+          }),
+      );
 
       reply.code(result.duplicate ? 200 : 202);
       return result;
@@ -148,14 +245,23 @@ export async function createIngestApp(config = loadIngestApiConfig()) {
     try {
       const headers = getHeaders(request);
       const payload = orderIngestRequestSchema.parse(request.body);
-      const trace = buildTraceContext(request.id, headers.tenantId);
-      const result = await service.ingestOrder(payload, {
-        tenantId: headers.tenantId,
-        traceId: trace.traceId,
-        idempotencyKey: headers.idempotencyKey,
-        actorId: headers.actorId,
-        source: 'ingest-api',
-      });
+      const result = await withActiveSpan(
+        'ingest-api',
+        'ingest.order',
+        {
+          tenant_id: headers.tenantId,
+          trace_id: request.contextLake.traceId,
+        },
+        () =>
+          service.ingestOrder(payload, {
+            tenantId: headers.tenantId,
+            traceId: request.contextLake.traceId,
+            requestId: request.contextLake.requestId,
+            idempotencyKey: headers.idempotencyKey,
+            actorId: headers.actorId,
+            source: 'ingest-api',
+          }),
+      );
 
       reply.code(result.duplicate ? 200 : 202);
       return result;
@@ -168,14 +274,23 @@ export async function createIngestApp(config = loadIngestApiConfig()) {
     try {
       const headers = getHeaders(request);
       const payload = agentSessionIngestRequestSchema.parse(request.body);
-      const trace = buildTraceContext(request.id, headers.tenantId);
-      const result = await service.ingestAgentSession(payload, {
-        tenantId: headers.tenantId,
-        traceId: trace.traceId,
-        idempotencyKey: headers.idempotencyKey,
-        actorId: headers.actorId,
-        source: 'ingest-api',
-      });
+      const result = await withActiveSpan(
+        'ingest-api',
+        'ingest.agent_session',
+        {
+          tenant_id: headers.tenantId,
+          trace_id: request.contextLake.traceId,
+        },
+        () =>
+          service.ingestAgentSession(payload, {
+            tenantId: headers.tenantId,
+            traceId: request.contextLake.traceId,
+            requestId: request.contextLake.requestId,
+            idempotencyKey: headers.idempotencyKey,
+            actorId: headers.actorId,
+            source: 'ingest-api',
+          }),
+      );
 
       reply.code(result.duplicate ? 200 : 202);
       return result;

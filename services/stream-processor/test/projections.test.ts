@@ -15,6 +15,7 @@ import {
 function buildEvent(overrides: Record<string, unknown>) {
   return {
     event_id: crypto.randomUUID(),
+    request_id: crypto.randomUUID(),
     event_version: 1,
     tenant_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     trace_id: 'trace-1',

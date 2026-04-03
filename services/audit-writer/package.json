@@ -14,6 +14,12 @@
   },
   "dependencies": {
     "@context-lake/shared-config": "workspace:*",
-    "@context-lake/shared-logging": "workspace:*"
+    "@context-lake/shared-db": "workspace:*",
+    "@context-lake/shared-events": "workspace:*",
+    "@context-lake/shared-http": "workspace:*",
+    "@context-lake/shared-logging": "workspace:*",
+    "@context-lake/shared-observability": "workspace:*",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.14.1"
   }
 }

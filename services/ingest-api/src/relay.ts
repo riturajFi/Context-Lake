@@ -74,6 +74,7 @@ export class OutboxRelay {
     try {
       const event = validateEventEnvelope({
         event_id: row.event_id,
+        request_id: row.request_id ?? (row.headers.request_id as string),
         event_type: row.event_name,
         event_version: row.event_version,
         tenant_id: row.tenant_id,

@@ -9,6 +9,7 @@ import type {
   OrderContextViewRow,
 } from '@context-lake/shared-db';
 
+import type { ContextAuditPublisher } from './audit.js';
 import { ApiError } from './errors.js';
 import { ContextQueryMetrics } from './metrics.js';
 
@@ -20,6 +21,9 @@ const MAX_RELATED_LIMIT = 25;
 export interface QueryRequestContext {
   tenantId: string;
   traceId: string;
+  requestId: string;
+  actorId?: string;
+  timestamp: string;
 }
 
 export interface ContextRequestOptions {
@@ -32,6 +36,8 @@ interface ContextServiceOptions {
   logger: FastifyBaseLogger;
   metrics: ContextQueryMetrics;
   slowQueryThresholdMs: number;
+  auditPublisher?: ContextAuditPublisher;
+  serviceName: string;
 }
 
 interface HistoryMetadata {
@@ -164,6 +170,8 @@ export class ContextQueryService {
       throw new ApiError(404, 'NOT_FOUND', 'customer context not found');
     }
 
+    await this.emitAudit('customer', customerId, context);
+
     return {
       trace_id: context.traceId,
       tenant_id: context.tenantId,
@@ -206,6 +214,7 @@ export class ContextQueryService {
     ]);
 
     this.logSlowQuery('order_context', context, startedAt, { orderId });
+    await this.emitAudit('order', orderId, context);
 
     return {
       trace_id: context.traceId,
@@ -248,6 +257,7 @@ export class ContextQueryService {
     ]);
 
     this.logSlowQuery('agent_session_context', context, startedAt, { sessionId });
+    await this.emitAudit('agent_session', sessionId, context, sessionId);
 
     return {
       trace_id: context.traceId,
@@ -318,6 +328,46 @@ export class ContextQueryService {
         },
         'slow context query',
       );
+    }
+  }
+
+  private async emitAudit(
+    entityType: 'customer' | 'order' | 'agent_session',
+    entityId: string,
+    context: QueryRequestContext,
+    agentSessionId?: string,
+  ) {
+    if (!this.options.auditPublisher) {
+      return;
+    }
+
+    try {
+      await this.options.auditPublisher.publishContextAccess({
+        tenantId: context.tenantId,
+        actorId: context.actorId,
+        traceId: context.traceId,
+        requestId: context.requestId,
+        entityType,
+        entityId,
+        serviceName: this.options.serviceName,
+        timestamp: context.timestamp,
+        agentSessionId,
+      });
+      this.options.metrics.incrementAuditPublishSuccess();
+    } catch (error) {
+      this.options.metrics.incrementAuditPublishFailure();
+      this.options.logger.error(
+        {
+          trace_id: context.traceId,
+          request_id: context.requestId,
+          tenant_id: context.tenantId,
+          entity_type: entityType,
+          entity_id: entityId,
+          error,
+        },
+        'failed to publish context access audit event',
+      );
+      throw new ApiError(503, 'AUDIT_UNAVAILABLE', 'audit pipeline unavailable');
     }
   }
 }

@@ -20,6 +20,10 @@ const baseEnv = {
   HOST: '127.0.0.1',
   SHUTDOWN_TIMEOUT_MS: '1000',
   SLOW_QUERY_THRESHOLD_MS: '1000',
+  API_AUTH_TOKENS_JSON:
+    '[{"token_id":"tenant-a","token":"context-lake-local-dev-token","tenant_ids":["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]}]',
+  RATE_LIMIT_WINDOW_MS: '60000',
+  RATE_LIMIT_MAX_REQUESTS: '120',
 };
 
 test('customer context happy path', async () => {
@@ -31,6 +35,7 @@ test('customer context happy path', async () => {
     method: 'GET',
     url: '/context/customer/11111111-1111-4111-8111-111111111111?audit_limit=2&related_limit=2',
     headers: {
+      authorization: 'Bearer context-lake-local-dev-token',
       'x-tenant-id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       'x-request-id': 'trace-test-customer',
     },
@@ -58,6 +63,7 @@ test('returns 404 for missing entity', async () => {
     method: 'GET',
     url: '/context/order/22222222-2222-4222-8222-222222222222',
     headers: {
+      authorization: 'Bearer context-lake-local-dev-token',
       'x-tenant-id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     },
   });
@@ -78,12 +84,13 @@ test('enforces tenant isolation', async () => {
     method: 'GET',
     url: '/context/agent-session/33333333-3333-4333-8333-333333333333',
     headers: {
+      authorization: 'Bearer context-lake-local-dev-token',
       'x-tenant-id': 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
     },
   });
 
-  assert.equal(response.statusCode, 404);
-  assert.equal(response.json().error.code, 'NOT_FOUND');
+  assert.equal(response.statusCode, 403);
+  assert.equal(response.json().error.code, 'TENANT_FORBIDDEN');
 
   await app.close();
   await pool.end();
@@ -97,6 +104,7 @@ test('returns stable validation errors for malformed input', async () => {
     method: 'GET',
     url: '/context/customer/not-a-uuid',
     headers: {
+      authorization: 'Bearer context-lake-local-dev-token',
       'x-tenant-id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       'x-request-id': 'trace-invalid',
     },
@@ -120,6 +128,7 @@ test('returns batch context with missing list', async () => {
     url: '/context/batch',
     headers: {
       'content-type': 'application/json',
+      authorization: 'Bearer context-lake-local-dev-token',
       'x-tenant-id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     },
     payload: {
@@ -148,7 +157,32 @@ test('returns batch context with missing list', async () => {
   await pool.end();
 });
 
+test('denies missing auth', async () => {
+  const { pool } = await createContextQueryTestDatabase();
+  await seedContextQueryFixtures(pool);
+  const app = await createTestApp(pool);
+
+  const response = await app.inject({
+    method: 'GET',
+    url: '/context/customer/11111111-1111-4111-8111-111111111111',
+    headers: {
+      'x-tenant-id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    },
+  });
+
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.json().error.code, 'AUTH_REQUIRED');
+
+  await app.close();
+  await pool.end();
+});
+
 async function createTestApp(pool: { query: (sql: string, params?: unknown[]) => Promise<unknown>; end: () => Promise<void> }) {
+  const auditPublisher = {
+    async publishContextAccess() {},
+    async disconnect() {},
+  };
+
   return createContextQueryApp({
     ...baseEnv,
     MINIO_PORT: 9000,
@@ -165,5 +199,6 @@ async function createTestApp(pool: { query: (sql: string, params?: unknown[]) =>
     MINIO_SECRET_KEY: 'minioadmin',
   } as never, {
     pool: pool as never,
+    auditPublisher: auditPublisher as never,
   });
 }

@@ -39,6 +39,11 @@ export async function createTestDatabase() {
     await readFile(path.join(sourceDirectory, '002_ingestion_resource_links.sql'), 'utf8'),
     'utf8',
   );
+  await writeFile(
+    path.join(tempDirectory, '005_audit_and_traceability.sql'),
+    await readFile(path.join(sourceDirectory, '005_audit_and_traceability.sql'), 'utf8'),
+    'utf8',
+  );
 
   await runSqlMigrations(pool, tempDirectory);
 

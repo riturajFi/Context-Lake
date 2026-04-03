@@ -18,6 +18,7 @@
     "@context-lake/shared-events": "workspace:*",
     "@context-lake/shared-http": "workspace:*",
     "@context-lake/shared-logging": "workspace:*",
+    "@context-lake/shared-observability": "workspace:*",
     "@context-lake/shared-types": "workspace:*",
     "fastify": "^5.2.1",
     "pg": "^8.14.1",

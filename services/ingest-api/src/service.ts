@@ -29,6 +29,7 @@ export interface IngestServiceDependencies {
 interface BaseIngestContext {
   tenantId: string;
   traceId: string;
+  requestId: string;
   idempotencyKey: string;
   source: string;
   actorId?: string;
@@ -95,6 +96,7 @@ export class IngestService {
           entityType: 'customer',
           entityId: customer.id,
           traceId: context.traceId,
+          requestId,
           tenantId: context.tenantId,
           actorId: context.actorId,
           idempotencyKey: context.idempotencyKey,
@@ -213,6 +215,7 @@ export class IngestService {
           entityType: 'order',
           entityId: order.id,
           traceId: context.traceId,
+          requestId,
           tenantId: context.tenantId,
           actorId: context.actorId,
           idempotencyKey: context.idempotencyKey,
@@ -328,6 +331,7 @@ export class IngestService {
           entityType: 'agent_session',
           entityId: session.id,
           traceId: context.traceId,
+          requestId,
           tenantId: context.tenantId,
           actorId: context.actorId,
           idempotencyKey: context.idempotencyKey,
@@ -494,6 +498,7 @@ export class IngestService {
     entityId,
     tenantId,
     traceId,
+    requestId,
     actorId,
     idempotencyKey,
     source,
@@ -504,6 +509,7 @@ export class IngestService {
     entityId: string;
     tenantId: string;
     traceId: string;
+    requestId: string;
     actorId?: string;
     idempotencyKey?: string;
     source: string;
@@ -513,6 +519,7 @@ export class IngestService {
 
     return {
       event_id: randomUUID(),
+      request_id: requestId,
       event_type: eventName,
       event_version: 1,
       tenant_id: tenantId,

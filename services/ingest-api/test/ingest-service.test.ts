@@ -27,6 +27,7 @@ test('ingests a customer and writes domain, ingestion, idempotency, and outbox r
       {
         tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
         traceId: 'trace-1',
+        requestId: crypto.randomUUID(),
         idempotencyKey: 'customer-1',
         source: 'ingest-api',
       },
@@ -79,6 +80,7 @@ test('returns the original resource for a duplicate request with the same idempo
       {
         tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
         traceId: 'trace-dup',
+        requestId: crypto.randomUUID(),
         idempotencyKey: 'customer-dup',
         source: 'ingest-api',
       },
@@ -95,6 +97,7 @@ test('returns the original resource for a duplicate request with the same idempo
       {
         tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
         traceId: 'trace-dup-2',
+        requestId: crypto.randomUUID(),
         idempotencyKey: 'customer-dup',
         source: 'ingest-api',
       },
@@ -134,6 +137,7 @@ test('rolls back the transaction on database failure', async () => {
         {
           tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
           traceId: 'trace-fail',
+          requestId: crypto.randomUUID(),
           idempotencyKey: 'customer-fail',
           source: 'ingest-api',
         },
@@ -174,6 +178,7 @@ test('marks outbox rows failed when kafka publishing is unavailable and retries 
       {
         tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
         traceId: 'trace-relay',
+        requestId: crypto.randomUUID(),
         idempotencyKey: 'customer-relay',
         source: 'ingest-api',
       },

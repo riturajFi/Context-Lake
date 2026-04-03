@@ -5,6 +5,10 @@ export class ApiError extends Error {
       | 'VALIDATION_ERROR'
       | 'MISSING_TENANT_ID'
       | 'MISSING_IDEMPOTENCY_KEY'
+      | 'AUTH_REQUIRED'
+      | 'AUTH_INVALID'
+      | 'TENANT_FORBIDDEN'
+      | 'RATE_LIMITED'
       | 'IDEMPOTENCY_CONFLICT'
       | 'NOT_FOUND'
       | 'INTERNAL_ERROR',
