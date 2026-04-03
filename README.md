@@ -95,6 +95,7 @@ Each API health endpoint performs dependency reachability checks for the service
 - `pnpm db:migrate`
 - `pnpm db:seed`
 - `pnpm db:migrate:smoke`
+- `pnpm db:outbox`
 - `pnpm compose:up`
 - `pnpm compose:down`
 - `pnpm compose:logs`
@@ -110,6 +111,7 @@ Make equivalents are also available:
 - `make db-migrate`
 - `make db-seed`
 - `make db-migrate-smoke`
+- `make db-outbox`
 - `make compose-up`
 - `make compose-down`
 - `make compose-logs`
@@ -160,6 +162,37 @@ pnpm db:migrate:smoke
 
 - [`docs/data-model.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/data-model.md)
 - [`docs/event-catalog.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/event-catalog.md)
+- [`docs/ingestion.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/ingestion.md)
+
+## Milestone 3: Ingestion Path
+
+Implemented in this repo:
+
+- `POST /ingest/customer`
+- `POST /ingest/order`
+- `POST /ingest/agent-session`
+- `GET /health`
+- Transactional writes of domain row + outbox row + ingestion record + idempotency ledger
+- Background outbox relay inside `ingest-api`
+- Kafka publish abstraction in [`packages/shared-events/src/index.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/packages/shared-events/src/index.ts)
+- Integration tests for happy path, duplicate requests, DB failure rollback, Kafka unavailable, and retry behavior
+
+### Inspecting Outbox Backlog
+
+```bash
+pnpm db:outbox
+```
+
+### Run Order For Local Testing
+
+```bash
+pnpm install
+bash infra/scripts/copy-env.sh
+pnpm compose:up
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
+```
 
 ## Current Scope
 

@@ -1,6 +1,6 @@
 PNPM := pnpm
 
-.PHONY: install dev lint test typecheck build db-migrate db-seed db-migrate-smoke compose-up compose-down compose-logs
+.PHONY: install dev lint test typecheck build db-migrate db-seed db-migrate-smoke db-outbox compose-up compose-down compose-logs
 
 install:
 	$(PNPM) install
@@ -28,6 +28,9 @@ db-seed:
 
 db-migrate-smoke:
 	$(PNPM) db:migrate:smoke
+
+db-outbox:
+	$(PNPM) db:outbox
 
 compose-up:
 	$(PNPM) compose:up
