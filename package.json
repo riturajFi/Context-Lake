@@ -13,6 +13,9 @@
     "test": "pnpm -r test",
     "typecheck": "tsc -b --pretty false",
     "build": "tsc -b",
+    "db:migrate": "tsx infra/scripts/migrate.ts",
+    "db:seed": "tsx infra/scripts/seed.ts",
+    "db:migrate:smoke": "pnpm --filter @context-lake/shared-db test",
     "compose:up": "docker compose up -d",
     "compose:down": "docker compose down",
     "compose:logs": "docker compose logs -f"

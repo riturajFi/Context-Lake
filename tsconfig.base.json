@@ -7,6 +7,7 @@
     "baseUrl": ".",
     "paths": {
       "@context-lake/shared-config": ["packages/shared-config/src/index.ts"],
+      "@context-lake/shared-db": ["packages/shared-db/src/index.ts"],
       "@context-lake/shared-events": ["packages/shared-events/src/index.ts"],
       "@context-lake/shared-http": ["packages/shared-http/src/index.ts"],
       "@context-lake/shared-logging": ["packages/shared-logging/src/index.ts"],
