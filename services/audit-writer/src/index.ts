@@ -82,6 +82,15 @@ async function runConnectivityChecks() {
 registerPrometheusEndpoint(adminApp, registry);
 
 adminApp.get('/health', async (_request, reply) => {
+  reply.code(200);
+  return {
+    status: 'ok',
+    service: 'audit-writer',
+    timestamp: new Date().toISOString(),
+  };
+});
+
+adminApp.get('/ready', async (_request, reply) => {
   syncPoolMetrics();
   reply.code(200);
   return {

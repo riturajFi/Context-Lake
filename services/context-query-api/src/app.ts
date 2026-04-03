@@ -208,6 +208,17 @@ export async function createContextQueryApp(
   }
 
   app.get('/health', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const status = {
+      status: 'ok' as const,
+      service: 'context-query-api',
+      timestamp: new Date().toISOString(),
+    };
+
+    reply.code(200);
+    return status;
+  });
+
+  app.get('/ready', async (_request: FastifyRequest, reply: FastifyReply) => {
     const checks = await getDependencyChecks();
     const status: HealthStatus & { metrics: ReturnType<typeof metrics.snapshot> } = {
       status: Object.values(checks).every((value) => value === 'up') ? 'ok' : 'degraded',

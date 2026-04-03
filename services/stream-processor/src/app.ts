@@ -96,6 +96,15 @@ export async function createStreamProcessor(
   registerPrometheusEndpoint(adminApp, registry);
 
   adminApp.get('/health', async (_request, reply) => {
+    reply.code(200);
+    return {
+      status: 'ok' as const,
+      service: 'stream-processor',
+      timestamp: new Date().toISOString(),
+    };
+  });
+
+  adminApp.get('/ready', async (_request, reply) => {
     syncMetrics();
     const snapshot = metrics.snapshot();
     const status = {

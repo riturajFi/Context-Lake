@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "tsc -b --watch --preserveWatchOutput",
     "lint": "eslint src --ext .ts",
-    "test": "node --import tsx --test test/schema.test.ts",
+    "test": "node --import tsx --test test/*.test.ts",
     "typecheck": "tsc -b --pretty false",
     "build": "tsc -b"
   },
