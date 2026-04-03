@@ -8,11 +8,12 @@
   "scripts": {
     "dev": "tsc -b --watch --preserveWatchOutput",
     "lint": "eslint src --ext .ts",
-    "test": "node --test",
+    "test": "node --import tsx --test test/schema.test.ts",
     "typecheck": "tsc -b --pretty false",
     "build": "tsc -b"
   },
   "dependencies": {
-    "@context-lake/shared-types": "workspace:*"
+    "@context-lake/shared-types": "workspace:*",
+    "zod": "^3.24.2"
   }
 }
