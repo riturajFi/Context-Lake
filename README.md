@@ -73,7 +73,12 @@ pnpm dev
 
 - `ingest-api`: `3001`
 - `context-query-api`: `3002`
+- `audit-writer admin`: `3003`
+- `stream-processor admin`: `3004`
+- `grafana`: `3005`
 - `kafka-ui`: `8080`
+- `prometheus`: `9090`
+- `jaeger`: `16686`
 - `minio`: `9000`
 - `minio-console`: `9001`
 
@@ -81,6 +86,8 @@ pnpm dev
 
 - `GET http://localhost:3001/health`
 - `GET http://localhost:3002/health`
+- `GET http://localhost:3003/health`
+- `GET http://localhost:3004/health`
 
 Each API health endpoint performs dependency reachability checks for the services it needs at this stage.
 
@@ -260,6 +267,38 @@ curl -X POST http://localhost:3002/context/batch \
     "related_limit": 3
   }'
 ```
+
+## Milestone 6: Auditability, Security, And Observability
+
+Implemented in this repo:
+
+- Bearer token or `x-api-key` auth for `ingest-api` and `context-query-api`
+- Server-side tenant enforcement and fixed-window rate limiting
+- `x-trace-id` propagation over HTTP plus `trace_id` and `request_id` propagation over Kafka
+- Context access audit emission from `context-query-api`
+- Kafka-backed `audit-writer` that persists immutable audit rows
+- Structured log redaction for auth headers and common sensitive fields
+- Prometheus metrics endpoints on APIs and worker admin ports
+- Jaeger OTLP ingestion and starter Grafana dashboards
+- DB pool, request latency, publish, lag, and failure visibility
+
+### Auth Header Example
+
+```bash
+curl -H 'authorization: Bearer context-lake-local-dev-token' \
+  -H 'x-tenant-id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' \
+  http://localhost:3002/context/customer/11111111-1111-4111-8111-111111111111
+```
+
+### Observability UI
+
+- Grafana: `http://localhost:3005`
+- Prometheus: `http://localhost:9090`
+- Jaeger: `http://localhost:16686`
+
+### Runbook
+
+- [`docs/operations-runbook.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/operations-runbook.md)
 
 ## Current Scope
 

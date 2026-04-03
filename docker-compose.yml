@@ -129,6 +129,42 @@ services:
       retries: 10
       start_period: 20s
 
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    container_name: context-lake-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    volumes:
+      - ./infra/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: context-lake-grafana
+    ports:
+      - '3005:3000'
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.66.0
+    container_name: context-lake-jaeger
+    ports:
+      - '16686:16686'
+      - '4318:4318'
+
 volumes:
   postgres-data:
   zookeeper-data:
@@ -136,3 +172,5 @@ volumes:
   kafka-data:
   redis-data:
   minio-data:
+  prometheus-data:
+  grafana-data:

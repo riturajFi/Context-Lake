@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'context-lake-services'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:3001'
+          - 'host.docker.internal:3002'
+          - 'host.docker.internal:3003'
+          - 'host.docker.internal:3004'
