@@ -7,6 +7,7 @@
     { "path": "./packages/shared-config" },
     { "path": "./packages/shared-db" },
     { "path": "./packages/shared-http" },
+    { "path": "./packages/shared-observability" },
     { "path": "./services/ingest-api" },
     { "path": "./services/context-query-api" },
     { "path": "./services/stream-processor" },

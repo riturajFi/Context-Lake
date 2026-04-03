@@ -13,7 +13,9 @@
     "build": "tsc -b"
   },
   "dependencies": {
+    "@context-lake/shared-config": "workspace:*",
     "@context-lake/shared-logging": "workspace:*",
+    "@context-lake/shared-observability": "workspace:*",
     "@context-lake/shared-types": "workspace:*",
     "fastify": "^5.2.1"
   }

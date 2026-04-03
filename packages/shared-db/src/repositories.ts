@@ -321,12 +321,30 @@ export interface InsertOutboxEventInput {
   headers?: Record<string, unknown>;
 }
 
+interface InsertAgentAuditLogInput {
+  id: string;
+  tenant_id: string;
+  agent_session_id: string | null;
+  source_event_id: string | null;
+  request_id: string | null;
+  service_name: string | null;
+  trace_path: unknown[];
+  event_type: string;
+  actor_id: string | null;
+  entity_type: ResourcePointer['resource_type'] | 'agent_session';
+  entity_id: string;
+  trace_id: string;
+  payload: Record<string, unknown>;
+  occurred_at: string;
+}
+
 export function createOutboxRepository(db: SqlExecutor) {
   return {
     async insert(input: InsertOutboxEventInput) {
       const result = await db.query<OutboxEventRow>(
         `insert into outbox_events (
           event_id,
+          request_id,
           tenant_id,
           topic,
           partition_key,
@@ -342,11 +360,12 @@ export function createOutboxRepository(db: SqlExecutor) {
           occurred_at,
           available_at
         ) values (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, $14, $15
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, $16
         )
         returning *`,
         [
           input.event.event_id,
+          input.event.request_id,
           input.event.tenant_id,
           input.topic,
           input.partitionKey,
@@ -891,6 +910,49 @@ export function createAgentSessionContextViewRepository(db: SqlExecutor) {
 
 export function createAgentAuditLogRepository(db: SqlExecutor) {
   return {
+    async insertImmutable(input: InsertAgentAuditLogInput) {
+      const result = await db.query<AgentAuditLogRow>(
+        `insert into agent_audit_logs (
+          id,
+          tenant_id,
+          agent_session_id,
+          source_event_id,
+          request_id,
+          service_name,
+          trace_path,
+          event_type,
+          actor_id,
+          entity_type,
+          entity_id,
+          trace_id,
+          payload,
+          occurred_at
+        ) values (
+          $1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13::jsonb, $14
+        )
+        on conflict do nothing
+        returning *`,
+        [
+          input.id,
+          input.tenant_id,
+          input.agent_session_id,
+          input.source_event_id,
+          input.request_id,
+          input.service_name,
+          JSON.stringify(input.trace_path),
+          input.event_type,
+          input.actor_id,
+          input.entity_type,
+          input.entity_id,
+          input.trace_id,
+          JSON.stringify(input.payload),
+          input.occurred_at,
+        ],
+      );
+
+      return result.rows[0] ?? null;
+    },
+
     async findById(tenantId: string, auditLogId: string) {
       const result = await db.query<AgentAuditLogRow>(
         `select *
@@ -914,6 +976,10 @@ export function createAgentAuditLogRepository(db: SqlExecutor) {
            id,
            tenant_id,
            agent_session_id,
+           source_event_id,
+           request_id,
+           service_name,
+           trace_path,
            event_type,
            actor_id,
            entity_type,
@@ -940,6 +1006,10 @@ export function createAgentAuditLogRepository(db: SqlExecutor) {
            id,
            tenant_id,
            agent_session_id,
+           source_event_id,
+           request_id,
+           service_name,
+           trace_path,
            event_type,
            actor_id,
            entity_type,

@@ -8,9 +8,6 @@
   },
   "include": ["src"],
   "references": [
-    { "path": "../shared-config" },
-    { "path": "../shared-logging" },
-    { "path": "../shared-observability" },
     { "path": "../shared-types" }
   ]
 }

@@ -10,6 +10,7 @@ import {
 
 const baseEnvelope = {
   event_id: '2d3ee188-6c8d-451b-b22f-8d9218a6d7f6',
+  request_id: '0f8fad5b-d9cb-469f-a165-70867728950e',
   event_version: 1,
   tenant_id: 'f3042d69-bec0-4e1d-b961-9f5e177b97a0',
   trace_id: 'trace-123',

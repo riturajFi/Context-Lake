@@ -44,6 +44,10 @@ export interface AgentAuditLogRow {
   id: string;
   tenant_id: string;
   agent_session_id: string | null;
+  source_event_id: string | null;
+  request_id: string | null;
+  service_name: string | null;
+  trace_path: unknown[];
   event_type: string;
   actor_id: string | null;
   entity_type: EntityType;
@@ -92,6 +96,7 @@ export interface IdempotencyKeyRow {
 
 export interface OutboxEventRow {
   event_id: string;
+  request_id: string | null;
   tenant_id: string;
   topic: TopicName;
   partition_key: string;
@@ -195,6 +200,10 @@ export interface ContextAuditReferenceRow {
   id: string;
   tenant_id: string;
   agent_session_id: string | null;
+  source_event_id: string | null;
+  request_id: string | null;
+  service_name: string | null;
+  trace_path: unknown[];
   event_type: string;
   actor_id: string | null;
   entity_type: EntityType;

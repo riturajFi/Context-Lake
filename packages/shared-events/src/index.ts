@@ -43,6 +43,7 @@ export type EventVersion = z.infer<typeof eventVersionSchema>;
 
 export const baseEventMetadataSchema = z.object({
   event_id: z.string().uuid(),
+  request_id: z.string().uuid(),
   event_type: z.enum([
     eventNames.customerCreated,
     eventNames.customerUpdated,
@@ -119,8 +120,24 @@ const agentResponseGeneratedPayloadSchema = z.object({
 const auditRecordedPayloadSchema = z.object({
   audit_log_id: z.string().uuid(),
   agent_session_id: z.string().uuid().optional(),
+  action: z.string().min(1),
+  audited_entity_type: z.enum(['customer', 'order', 'agent_session']),
+  audited_entity_id: z.string().uuid(),
+  request_id: z.string().uuid(),
+  service_name: z.string().min(1),
+  trace_path: z
+    .array(
+      z.object({
+        service_name: z.string().min(1),
+        trace_id: z.string().min(1),
+        request_id: z.string().uuid(),
+        timestamp: utcTimestampSchema,
+      }),
+    )
+    .min(1),
   severity: z.enum(['info', 'warning', 'error']),
   message: z.string().min(1),
+  metadata: z.record(z.unknown()).default({}),
 });
 
 function createEnvelopeSchema<
@@ -289,7 +306,15 @@ export async function createKafkaEventPublisher(config: {
           {
             key: message.key,
             value: JSON.stringify(message.event),
-            headers: message.headers,
+            headers: {
+              trace_id: message.event.trace_id,
+              request_id: message.event.request_id,
+              tenant_id: message.event.tenant_id,
+              actor_id: message.event.actor_id ?? '',
+              source: message.event.source,
+              produced_at: message.event.produced_at,
+              ...message.headers,
+            },
           },
         ],
       });

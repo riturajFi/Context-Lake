@@ -11,6 +11,7 @@
       "@context-lake/shared-events": ["packages/shared-events/src/index.ts"],
       "@context-lake/shared-http": ["packages/shared-http/src/index.ts"],
       "@context-lake/shared-logging": ["packages/shared-logging/src/index.ts"],
+      "@context-lake/shared-observability": ["packages/shared-observability/src/index.ts"],
       "@context-lake/shared-types": ["packages/shared-types/src/index.ts"]
     },
     "strict": true,
