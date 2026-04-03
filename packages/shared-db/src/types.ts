@@ -113,3 +113,80 @@ export interface OutboxEventRow {
   published_at: string | null;
   created_at: string;
 }
+
+export interface CustomerContextViewRow {
+  tenant_id: string;
+  customer_id: string;
+  external_ref: string;
+  email: string;
+  full_name: string;
+  status: string;
+  customer_metadata: Record<string, unknown>;
+  source_event_id: string;
+  source_event_version: number;
+  source_occurred_at: string | Date;
+  projection_updated_at: string | Date;
+}
+
+export interface OrderContextViewRow {
+  tenant_id: string;
+  order_id: string;
+  customer_id: string;
+  order_number: string;
+  status: string;
+  amount_cents: number;
+  currency: string;
+  order_metadata: Record<string, unknown>;
+  source_event_id: string;
+  source_event_version: number;
+  source_occurred_at: string | Date;
+  projection_updated_at: string | Date;
+}
+
+export interface AgentSessionContextViewRow {
+  tenant_id: string;
+  agent_session_id: string;
+  customer_id: string | null;
+  order_id: string | null;
+  status: string | null;
+  channel: string | null;
+  last_context_request_id: string | null;
+  last_context_query_text: string | null;
+  last_context_scope: unknown[];
+  last_response_id: string | null;
+  last_response_model: string | null;
+  last_response_token_count: number | null;
+  session_summary: Record<string, unknown>;
+  source_event_id: string;
+  source_event_version: number;
+  source_occurred_at: string | Date;
+  projection_updated_at: string | Date;
+}
+
+export interface ProjectionEventApplicationRow {
+  consumer_name: string;
+  topic: string;
+  partition: number;
+  kafka_offset: string;
+  event_id: string;
+  event_type: string;
+  tenant_id: string;
+  entity_type: string;
+  entity_id: string;
+  processed_at: string | Date;
+}
+
+export interface ProjectionDeadLetterRow {
+  id: string;
+  consumer_name: string;
+  topic: string;
+  partition: number;
+  kafka_offset: string;
+  event_id: string | null;
+  event_type: string | null;
+  tenant_id: string | null;
+  trace_id: string | null;
+  failure_reason: string;
+  payload: Record<string, unknown>;
+  created_at: string | Date;
+}

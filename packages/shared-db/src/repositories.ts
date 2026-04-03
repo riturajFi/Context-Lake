@@ -4,11 +4,16 @@ import type { TopicName } from '@context-lake/shared-types';
 import type { SqlExecutor } from './client.js';
 import type {
   AgentSessionRow,
+  AgentSessionContextViewRow,
   CustomerRow,
+  CustomerContextViewRow,
   IdempotencyKeyRow,
   IngestionRequestRow,
   OrderRow,
+  OrderContextViewRow,
   OutboxEventRow,
+  ProjectionDeadLetterRow,
+  ProjectionEventApplicationRow,
   ResourcePointer,
 } from './types.js';
 
@@ -479,6 +484,319 @@ export function createOutboxRepository(db: SqlExecutor) {
   };
 }
 
+interface ProjectionEventApplicationInput {
+  consumer_name: string;
+  topic: string;
+  partition: number;
+  kafka_offset: string;
+  event_id: string;
+  event_type: string;
+  tenant_id: string;
+  entity_type: string;
+  entity_id: string;
+}
+
+interface ProjectionDeadLetterInput {
+  consumer_name: string;
+  topic: string;
+  partition: number;
+  kafka_offset: string;
+  event_id: string | null;
+  event_type: string | null;
+  tenant_id: string | null;
+  trace_id: string | null;
+  failure_reason: string;
+  payload: Record<string, unknown>;
+}
+
+export function createProjectionStateRepository(db: SqlExecutor) {
+  return {
+    async recordEventApplication(input: ProjectionEventApplicationInput) {
+      const result = await db.query<ProjectionEventApplicationRow>(
+        `insert into projection_event_applications (
+          consumer_name,
+          topic,
+          partition,
+          kafka_offset,
+          event_id,
+          event_type,
+          tenant_id,
+          entity_type,
+          entity_id
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        on conflict do nothing
+        returning *`,
+        [
+          input.consumer_name,
+          input.topic,
+          input.partition,
+          input.kafka_offset,
+          input.event_id,
+          input.event_type,
+          input.tenant_id,
+          input.entity_type,
+          input.entity_id,
+        ],
+      );
+
+      return result.rows[0] ?? null;
+    },
+
+    async hasProcessedEvent(consumerName: string, eventId: string) {
+      const result = await db.query<{ found: number }>(
+        `select 1 as found
+         from projection_event_applications
+         where consumer_name = $1
+           and event_id = $2`,
+        [consumerName, eventId],
+      );
+
+      return result.rows.length > 0;
+    },
+
+    async insertDeadLetter(input: ProjectionDeadLetterInput) {
+      const result = await db.query<ProjectionDeadLetterRow>(
+        `insert into projection_dead_letters (
+          consumer_name,
+          topic,
+          partition,
+          kafka_offset,
+          event_id,
+          event_type,
+          tenant_id,
+          trace_id,
+          failure_reason,
+          payload
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
+        returning *`,
+        [
+          input.consumer_name,
+          input.topic,
+          input.partition,
+          input.kafka_offset,
+          input.event_id,
+          input.event_type,
+          input.tenant_id,
+          input.trace_id,
+          input.failure_reason,
+          JSON.stringify(input.payload),
+        ],
+      );
+
+      return result.rows[0];
+    },
+
+    async clearProjectionState() {
+      await db.query(`truncate projection_event_applications`);
+      await db.query(`truncate projection_dead_letters`);
+    },
+  };
+}
+
+export function createCustomerContextViewRepository(db: SqlExecutor) {
+  return {
+    async findById(tenantId: string, customerId: string) {
+      const result = await db.query<CustomerContextViewRow>(
+        `select * from customer_context_view where tenant_id = $1 and customer_id = $2`,
+        [tenantId, customerId],
+      );
+
+      return result.rows[0] ?? null;
+    },
+
+    async upsert(input: Omit<CustomerContextViewRow, 'projection_updated_at'>) {
+      const result = await db.query<CustomerContextViewRow>(
+        `insert into customer_context_view (
+          tenant_id,
+          customer_id,
+          external_ref,
+          email,
+          full_name,
+          status,
+          customer_metadata,
+          source_event_id,
+          source_event_version,
+          source_occurred_at
+        ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)
+        on conflict (tenant_id, customer_id)
+        do update set
+          external_ref = excluded.external_ref,
+          email = excluded.email,
+          full_name = excluded.full_name,
+          status = excluded.status,
+          customer_metadata = excluded.customer_metadata,
+          source_event_id = excluded.source_event_id,
+          source_event_version = excluded.source_event_version,
+          source_occurred_at = excluded.source_occurred_at,
+          projection_updated_at = now()
+        where customer_context_view.source_occurred_at <= excluded.source_occurred_at
+        returning *`,
+        [
+          input.tenant_id,
+          input.customer_id,
+          input.external_ref,
+          input.email,
+          input.full_name,
+          input.status,
+          JSON.stringify(input.customer_metadata),
+          input.source_event_id,
+          input.source_event_version,
+          input.source_occurred_at,
+        ],
+      );
+
+      return result.rows[0] ?? null;
+    },
+
+    async truncate() {
+      await db.query(`truncate customer_context_view`);
+    },
+  };
+}
+
+export function createOrderContextViewRepository(db: SqlExecutor) {
+  return {
+    async findById(tenantId: string, orderId: string) {
+      const result = await db.query<OrderContextViewRow>(
+        `select * from order_context_view where tenant_id = $1 and order_id = $2`,
+        [tenantId, orderId],
+      );
+
+      return result.rows[0] ?? null;
+    },
+
+    async upsert(input: Omit<OrderContextViewRow, 'projection_updated_at'>) {
+      const result = await db.query<OrderContextViewRow>(
+        `insert into order_context_view (
+          tenant_id,
+          order_id,
+          customer_id,
+          order_number,
+          status,
+          amount_cents,
+          currency,
+          order_metadata,
+          source_event_id,
+          source_event_version,
+          source_occurred_at
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11)
+        on conflict (tenant_id, order_id)
+        do update set
+          customer_id = excluded.customer_id,
+          order_number = excluded.order_number,
+          status = excluded.status,
+          amount_cents = excluded.amount_cents,
+          currency = excluded.currency,
+          order_metadata = excluded.order_metadata,
+          source_event_id = excluded.source_event_id,
+          source_event_version = excluded.source_event_version,
+          source_occurred_at = excluded.source_occurred_at,
+          projection_updated_at = now()
+        where order_context_view.source_occurred_at <= excluded.source_occurred_at
+        returning *`,
+        [
+          input.tenant_id,
+          input.order_id,
+          input.customer_id,
+          input.order_number,
+          input.status,
+          input.amount_cents,
+          input.currency,
+          JSON.stringify(input.order_metadata),
+          input.source_event_id,
+          input.source_event_version,
+          input.source_occurred_at,
+        ],
+      );
+
+      return result.rows[0] ?? null;
+    },
+
+    async truncate() {
+      await db.query(`truncate order_context_view`);
+    },
+  };
+}
+
+export function createAgentSessionContextViewRepository(db: SqlExecutor) {
+  return {
+    async findById(tenantId: string, sessionId: string) {
+      const result = await db.query<AgentSessionContextViewRow>(
+        `select * from agent_session_context_view where tenant_id = $1 and agent_session_id = $2`,
+        [tenantId, sessionId],
+      );
+
+      return result.rows[0] ?? null;
+    },
+
+    async upsert(input: Omit<AgentSessionContextViewRow, 'projection_updated_at'>) {
+      const result = await db.query<AgentSessionContextViewRow>(
+        `insert into agent_session_context_view (
+          tenant_id,
+          agent_session_id,
+          customer_id,
+          order_id,
+          status,
+          channel,
+          last_context_request_id,
+          last_context_query_text,
+          last_context_scope,
+          last_response_id,
+          last_response_model,
+          last_response_token_count,
+          session_summary,
+          source_event_id,
+          source_event_version,
+          source_occurred_at
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13::jsonb, $14, $15, $16)
+        on conflict (tenant_id, agent_session_id)
+        do update set
+          customer_id = excluded.customer_id,
+          order_id = excluded.order_id,
+          status = excluded.status,
+          channel = excluded.channel,
+          last_context_request_id = excluded.last_context_request_id,
+          last_context_query_text = excluded.last_context_query_text,
+          last_context_scope = excluded.last_context_scope,
+          last_response_id = excluded.last_response_id,
+          last_response_model = excluded.last_response_model,
+          last_response_token_count = excluded.last_response_token_count,
+          session_summary = excluded.session_summary,
+          source_event_id = excluded.source_event_id,
+          source_event_version = excluded.source_event_version,
+          source_occurred_at = excluded.source_occurred_at,
+          projection_updated_at = now()
+        where agent_session_context_view.source_occurred_at <= excluded.source_occurred_at
+        returning *`,
+        [
+          input.tenant_id,
+          input.agent_session_id,
+          input.customer_id,
+          input.order_id,
+          input.status,
+          input.channel,
+          input.last_context_request_id,
+          input.last_context_query_text,
+          JSON.stringify(input.last_context_scope),
+          input.last_response_id,
+          input.last_response_model,
+          input.last_response_token_count,
+          JSON.stringify(input.session_summary),
+          input.source_event_id,
+          input.source_event_version,
+          input.source_occurred_at,
+        ],
+      );
+
+      return result.rows[0] ?? null;
+    },
+
+    async truncate() {
+      await db.query(`truncate agent_session_context_view`);
+    },
+  };
+}
+
 export function createRepositoryContext(db: SqlExecutor) {
   return {
     customers: createCustomerRepository(db),
@@ -487,6 +805,10 @@ export function createRepositoryContext(db: SqlExecutor) {
     ingestionRequests: createIngestionRequestRepository(db),
     idempotencyKeys: createIdempotencyRepository(db),
     outbox: createOutboxRepository(db),
+    projectionState: createProjectionStateRepository(db),
+    customerContextView: createCustomerContextViewRepository(db),
+    orderContextView: createOrderContextViewRepository(db),
+    agentSessionContextView: createAgentSessionContextViewRepository(db),
   };
 }
 

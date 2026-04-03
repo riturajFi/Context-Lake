@@ -180,9 +180,25 @@ importers:
       '@context-lake/shared-config':
         specifier: workspace:*
         version: link:../../packages/shared-config
+      '@context-lake/shared-db':
+        specifier: workspace:*
+        version: link:../../packages/shared-db
+      '@context-lake/shared-events':
+        specifier: workspace:*
+        version: link:../../packages/shared-events
       '@context-lake/shared-logging':
         specifier: workspace:*
         version: link:../../packages/shared-logging
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
+      pg:
+        specifier: ^8.14.1
+        version: 8.20.0
+    devDependencies:
+      pg-mem:
+        specifier: ^3.0.5
+        version: 3.0.14
 
 packages:
 
