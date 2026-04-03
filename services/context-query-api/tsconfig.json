@@ -9,6 +9,7 @@
   "include": ["src"],
   "references": [
     { "path": "../../packages/shared-config" },
+    { "path": "../../packages/shared-db" },
     { "path": "../../packages/shared-http" },
     { "path": "../../packages/shared-logging" },
     { "path": "../../packages/shared-types" }

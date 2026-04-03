@@ -190,3 +190,17 @@ export interface ProjectionDeadLetterRow {
   payload: Record<string, unknown>;
   created_at: string | Date;
 }
+
+export interface ContextAuditReferenceRow {
+  id: string;
+  tenant_id: string;
+  agent_session_id: string | null;
+  event_type: string;
+  actor_id: string | null;
+  entity_type: EntityType;
+  entity_id: string;
+  trace_id: string;
+  occurred_at: string | Date;
+  created_at: string | Date;
+  payload_summary: Record<string, unknown>;
+}

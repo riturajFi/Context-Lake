@@ -4,7 +4,9 @@ import type { TopicName } from '@context-lake/shared-types';
 import type { SqlExecutor } from './client.js';
 import type {
   AgentSessionRow,
+  AgentAuditLogRow,
   AgentSessionContextViewRow,
+  ContextAuditReferenceRow,
   CustomerRow,
   CustomerContextViewRow,
   IdempotencyKeyRow,
@@ -604,6 +606,22 @@ export function createCustomerContextViewRepository(db: SqlExecutor) {
       return result.rows[0] ?? null;
     },
 
+    async findByIds(tenantId: string, customerIds: string[]) {
+      if (customerIds.length === 0) {
+        return [];
+      }
+
+      const result = await db.query<CustomerContextViewRow>(
+        `select *
+         from customer_context_view
+         where tenant_id = $1
+           and customer_id = any($2::uuid[])`,
+        [tenantId, customerIds],
+      );
+
+      return result.rows;
+    },
+
     async upsert(input: Omit<CustomerContextViewRow, 'projection_updated_at'>) {
       const result = await db.query<CustomerContextViewRow>(
         `insert into customer_context_view (
@@ -663,6 +681,36 @@ export function createOrderContextViewRepository(db: SqlExecutor) {
       );
 
       return result.rows[0] ?? null;
+    },
+
+    async findByIds(tenantId: string, orderIds: string[]) {
+      if (orderIds.length === 0) {
+        return [];
+      }
+
+      const result = await db.query<OrderContextViewRow>(
+        `select *
+         from order_context_view
+         where tenant_id = $1
+           and order_id = any($2::uuid[])`,
+        [tenantId, orderIds],
+      );
+
+      return result.rows;
+    },
+
+    async listByCustomerId(tenantId: string, customerId: string, limit: number) {
+      const result = await db.query<OrderContextViewRow>(
+        `select *
+         from order_context_view
+         where tenant_id = $1
+           and customer_id = $2
+         order by projection_updated_at desc
+         limit $3`,
+        [tenantId, customerId, limit],
+      );
+
+      return result.rows;
     },
 
     async upsert(input: Omit<OrderContextViewRow, 'projection_updated_at'>) {
@@ -727,6 +775,50 @@ export function createAgentSessionContextViewRepository(db: SqlExecutor) {
       );
 
       return result.rows[0] ?? null;
+    },
+
+    async findByIds(tenantId: string, sessionIds: string[]) {
+      if (sessionIds.length === 0) {
+        return [];
+      }
+
+      const result = await db.query<AgentSessionContextViewRow>(
+        `select *
+         from agent_session_context_view
+         where tenant_id = $1
+           and agent_session_id = any($2::uuid[])`,
+        [tenantId, sessionIds],
+      );
+
+      return result.rows;
+    },
+
+    async listByCustomerId(tenantId: string, customerId: string, limit: number) {
+      const result = await db.query<AgentSessionContextViewRow>(
+        `select *
+         from agent_session_context_view
+         where tenant_id = $1
+           and customer_id = $2
+         order by projection_updated_at desc
+         limit $3`,
+        [tenantId, customerId, limit],
+      );
+
+      return result.rows;
+    },
+
+    async listByOrderId(tenantId: string, orderId: string, limit: number) {
+      const result = await db.query<AgentSessionContextViewRow>(
+        `select *
+         from agent_session_context_view
+         where tenant_id = $1
+           and order_id = $2
+         order by projection_updated_at desc
+         limit $3`,
+        [tenantId, orderId, limit],
+      );
+
+      return result.rows;
     },
 
     async upsert(input: Omit<AgentSessionContextViewRow, 'projection_updated_at'>) {
@@ -797,6 +889,78 @@ export function createAgentSessionContextViewRepository(db: SqlExecutor) {
   };
 }
 
+export function createAgentAuditLogRepository(db: SqlExecutor) {
+  return {
+    async findById(tenantId: string, auditLogId: string) {
+      const result = await db.query<AgentAuditLogRow>(
+        `select *
+         from agent_audit_logs
+         where tenant_id = $1
+           and id = $2`,
+        [tenantId, auditLogId],
+      );
+
+      return result.rows[0] ?? null;
+    },
+
+    async listRecentByEntity(
+      tenantId: string,
+      entityType: string,
+      entityId: string,
+      limit: number,
+    ) {
+      const result = await db.query<ContextAuditReferenceRow>(
+        `select
+           id,
+           tenant_id,
+           agent_session_id,
+           event_type,
+           actor_id,
+           entity_type,
+           entity_id,
+           trace_id,
+           occurred_at,
+           created_at,
+           payload as payload_summary
+         from agent_audit_logs
+         where tenant_id = $1
+           and entity_type = $2
+           and entity_id = $3
+         order by occurred_at desc, created_at desc
+         limit $4`,
+        [tenantId, entityType, entityId, limit],
+      );
+
+      return result.rows;
+    },
+
+    async listRecentBySessionId(tenantId: string, sessionId: string, limit: number) {
+      const result = await db.query<ContextAuditReferenceRow>(
+        `select
+           id,
+           tenant_id,
+           agent_session_id,
+           event_type,
+           actor_id,
+           entity_type,
+           entity_id,
+           trace_id,
+           occurred_at,
+           created_at,
+           payload as payload_summary
+         from agent_audit_logs
+         where tenant_id = $1
+           and agent_session_id = $2
+         order by occurred_at desc, created_at desc
+         limit $3`,
+        [tenantId, sessionId, limit],
+      );
+
+      return result.rows;
+    },
+  };
+}
+
 export function createRepositoryContext(db: SqlExecutor) {
   return {
     customers: createCustomerRepository(db),
@@ -809,6 +973,7 @@ export function createRepositoryContext(db: SqlExecutor) {
     customerContextView: createCustomerContextViewRepository(db),
     orderContextView: createOrderContextViewRepository(db),
     agentSessionContextView: createAgentSessionContextViewRepository(db),
+    agentAuditLogs: createAgentAuditLogRepository(db),
   };
 }
 
