@@ -1,19 +1,46 @@
-# Context Lake
+# Context Lake 🌊
 
-Production-oriented monorepo for a multi-tenant, event-driven context engine for AI agents.
+Context Lake is a **real-time context engine for AI agents**.
 
-The repository currently includes:
+It helps you:
 
-- transactional ingestion with idempotency and an outbox relay
-- Kafka-backed projections into materialized context views
-- a governed context query API
-- append-only audit persistence
-- shared auth, logging, metrics, and tracing foundations
-- CI, image build, replay, resilience, and load-test basics
+- ingest operational data safely
+- publish events through Kafka
+- build fast read models
+- serve agent-friendly context over APIs
+- keep an audit trail of what happened
 
-This is not a full production platform yet. Local Docker Compose is for development and deployment rehearsal only.
+Think of it like this:
 
-## Repository Structure
+**write data -> publish events -> build projections -> serve context -> store audit history**
+
+This repo is built for local development and project demos. It is **production-oriented**, but the included Docker Compose setup is **not full production infrastructure**.
+
+## ✨ What You Can Show With This Project
+
+- a transactional ingestion pipeline
+- Kafka-based event flow
+- materialized context views for fast reads
+- an audit trail for access and agent activity
+- metrics, tracing, and health/readiness checks
+- a presentation frontend for demoing the system
+
+## 🧱 Main Services
+
+- `ingest-api`
+  - receives write requests
+  - stores source-of-truth data and outbox events
+- `stream-processor`
+  - consumes Kafka events
+  - builds projection tables
+- `context-query-api`
+  - serves context from projections
+- `audit-writer`
+  - stores immutable audit rows
+- `presentation-web`
+  - frontend for presenting the architecture and live runtime
+
+## 🗂️ Repo Structure
 
 ```text
 services/
@@ -38,36 +65,26 @@ infra/
 docs/
 ```
 
-## Core Services
+## ✅ Prerequisites
 
-- `ingest-api`
-  - write entrypoint for customers, orders, and agent sessions
-  - transactional outbox relay
-- `stream-processor`
-  - Kafka consumers and projection builders
-- `context-query-api`
-  - low-latency read API over materialized views
-- `audit-writer`
-  - immutable audit log persistence from Kafka
-- `presentation-web`
-  - demo-ready frontend for presenting the platform
-  - aggregates local service readiness into a single UI
+Install these first:
 
-## Local Stack
+- Node.js `20+`
+- `pnpm`
+- Docker Desktop or Docker Engine with Compose
 
-`docker compose up` starts:
+Check versions:
 
-- Postgres
-- Zookeeper
-- Kafka
-- Kafka UI
-- Redis
-- MinIO
-- Prometheus
-- Grafana
-- Jaeger
+```bash
+node -v
+pnpm -v
+docker --version
+docker compose version
+```
 
-## Local Startup
+## 🚀 Quick Start
+
+Run these commands from the repo root:
 
 ```bash
 pnpm install
@@ -78,114 +95,248 @@ pnpm db:seed
 pnpm dev
 ```
 
-## Ports
+What each step does:
 
-- `ingest-api`: `3001`
-- `context-query-api`: `3002`
-- `audit-writer` admin: `3003`
-- `stream-processor` admin: `3004`
-- `presentation-web`: `3010`
-- `grafana`: `3005`
-- `kafka-ui`: `8080`
-- `prometheus`: `9090`
-- `jaeger`: `16686`
-- `minio`: `9000`
-- `minio-console`: `9001`
+1. `pnpm install`
+   installs all workspace dependencies
+2. `bash infra/scripts/copy-env.sh`
+   creates local `.env` files from the examples
+3. `pnpm compose:up`
+   starts Postgres, Kafka, Redis, MinIO, Grafana, Prometheus, and Jaeger
+4. `pnpm db:migrate`
+   creates the database schema
+5. `pnpm db:seed`
+   loads local sample data
+6. `pnpm dev`
+   starts all app services in watch mode
 
-## Probes And Metrics
+## 🌐 What To Open After Startup
 
-Liveness:
+### Main app
 
-- `GET http://localhost:3001/health`
-- `GET http://localhost:3002/health`
-- `GET http://localhost:3003/health`
-- `GET http://localhost:3004/health`
+- Presentation UI: `http://localhost:3010`
 
-Readiness:
+This is the best place to start if you want to **present the project**.
 
-- `GET http://localhost:3001/ready`
-- `GET http://localhost:3002/ready`
-- `GET http://localhost:3003/ready`
-- `GET http://localhost:3004/ready`
+### APIs
 
-Metrics:
+- Ingest API: `http://localhost:3001`
+- Context Query API: `http://localhost:3002`
+- Audit Writer admin: `http://localhost:3003`
+- Stream Processor admin: `http://localhost:3004`
 
-- `GET http://localhost:3001/metrics`
-- `GET http://localhost:3002/metrics`
-- `GET http://localhost:3003/metrics`
-- `GET http://localhost:3004/metrics`
+### Infra and observability
 
-Presentation UI:
+- Grafana: `http://localhost:3005`
+- Kafka UI: `http://localhost:8080`
+- Prometheus: `http://localhost:9090`
+- Jaeger: `http://localhost:16686`
+- MinIO API: `http://localhost:9000`
+- MinIO Console: `http://localhost:9001`
 
-- `GET http://localhost:3010`
-- `GET http://localhost:3010/api/runtime`
+## 🩺 Health, Readiness, and Metrics
 
-## Developer Commands
+### Health
 
-- `pnpm lint`
-- `pnpm test`
-- `pnpm test:unit`
-- `pnpm test:integration`
-- `pnpm test:contracts`
-- `pnpm test:resilience`
-- `pnpm typecheck`
-- `pnpm build`
-- `pnpm validate:full`
-- `pnpm db:migrate`
-- `pnpm db:seed`
-- `pnpm db:migrate:smoke`
-- `pnpm db:outbox`
-- `pnpm db:projections`
-- `pnpm stream:replay`
-- `pnpm load:ingest`
-- `pnpm load:context`
-- `pnpm compose:up`
-- `pnpm compose:up:prod`
-- `pnpm compose:down`
-- `pnpm compose:logs`
+- `http://localhost:3001/health`
+- `http://localhost:3002/health`
+- `http://localhost:3003/health`
+- `http://localhost:3004/health`
 
-Make targets mirror the same commands.
+### Readiness
 
-## CI And Images
+- `http://localhost:3001/ready`
+- `http://localhost:3002/ready`
+- `http://localhost:3003/ready`
+- `http://localhost:3004/ready`
 
-- [`.github/workflows/ci.yml`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/.github/workflows/ci.yml)
-  - install, lint, typecheck, unit, integration, contract, resilience, build
-- [`.github/workflows/docker-images.yml`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/.github/workflows/docker-images.yml)
-  - builds one Docker image per service
-  - runs on pull requests, `main`, and tags matching `v*.*.*`
+### Metrics
 
-## Production-Readiness Notes
+- `http://localhost:3001/metrics`
+- `http://localhost:3002/metrics`
+- `http://localhost:3003/metrics`
+- `http://localhost:3004/metrics`
 
-What the repo is ready for:
+### Presentation runtime API
 
-- repeatable local validation
-- contract and replay testing
-- production-like Docker image builds
-- readiness and liveness probes
-- backup and restore guidance for Postgres
-- deployment ordering and rollback notes
+- `http://localhost:3010/api/runtime`
 
-What it is not yet:
+## 🧪 How To Use The Project Locally
 
-- Kubernetes-ready
-- integrated with a secret manager
-- backed by HA Kafka
-- backed by managed Postgres failover
-- backed by durable production object storage
+Once everything is running, use it in this order:
 
-## Key Docs
+### 1. Open the presentation frontend
 
-- [`docs/architecture.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/architecture.md)
-- [`docs/data-model.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/data-model.md)
-- [`docs/event-catalog.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/event-catalog.md)
-- [`docs/ingestion.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/ingestion.md)
-- [`docs/projections.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/projections.md)
-- [`docs/context-query.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/context-query.md)
-- [`docs/operations-runbook.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/operations-runbook.md)
-- [`docs/deployment-readiness.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/deployment-readiness.md)
-- [`docs/load-testing.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/load-testing.md)
+Go to:
 
-## Full Local Validation
+```text
+http://localhost:3010
+```
+
+You’ll see:
+
+- system overview
+- service health/readiness
+- architecture flow
+- request lifecycle
+
+### 2. Check that services are ready
+
+```bash
+curl http://localhost:3001/ready
+curl http://localhost:3002/ready
+curl http://localhost:3003/ready
+curl http://localhost:3004/ready
+```
+
+### 3. Ingest a customer
+
+```bash
+curl -X POST http://localhost:3001/ingest/customer \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer context-lake-local-dev-token' \
+  -H 'x-tenant-id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' \
+  -H 'idempotency-key: customer-demo-001' \
+  -d '{
+    "external_ref": "cust-demo-001",
+    "email": "demo@example.com",
+    "full_name": "Demo User",
+    "status": "active",
+    "metadata": {
+      "source": "demo"
+    }
+  }'
+```
+
+### 4. Query customer context
+
+```bash
+curl http://localhost:3002/context/customer/11111111-1111-4111-8111-111111111111 \
+  -H 'authorization: Bearer context-lake-local-dev-token' \
+  -H 'x-tenant-id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+```
+
+### 5. Inspect the outbox backlog
+
+```bash
+pnpm db:outbox
+```
+
+### 6. Inspect projections
+
+```bash
+pnpm db:projections
+```
+
+### 7. Replay projections if needed
+
+```bash
+pnpm stream:replay
+```
+
+## 🛠️ Useful Commands
+
+### Development
+
+```bash
+pnpm dev
+pnpm compose:up
+pnpm compose:down
+pnpm compose:logs
+```
+
+### Database
+
+```bash
+pnpm db:migrate
+pnpm db:seed
+pnpm db:migrate:smoke
+pnpm db:outbox
+pnpm db:projections
+```
+
+### Validation
+
+```bash
+pnpm lint
+pnpm test
+pnpm test:unit
+pnpm test:integration
+pnpm test:contracts
+pnpm test:resilience
+pnpm typecheck
+pnpm build
+pnpm validate:full
+```
+
+### Load testing
+
+```bash
+pnpm load:ingest
+pnpm load:context
+```
+
+## 🧠 How The System Works
+
+### Write path
+
+1. external system calls `ingest-api`
+2. request is validated
+3. DB transaction writes:
+   - domain row
+   - idempotency record
+   - ingestion record
+   - outbox event
+4. outbox relay publishes to Kafka
+
+### Processing path
+
+1. `stream-processor` consumes Kafka events
+2. validates event envelope
+3. updates projection tables
+4. ignores duplicates safely
+
+### Read path
+
+1. caller hits `context-query-api`
+2. API reads projection tables
+3. returns context-shaped response
+4. emits an audit event
+
+### Audit path
+
+1. `audit-writer` consumes audit events
+2. stores immutable audit rows
+
+## 🔐 Local Demo Auth
+
+Use this token locally:
+
+```text
+context-lake-local-dev-token
+```
+
+Example auth header:
+
+```bash
+-H 'authorization: Bearer context-lake-local-dev-token'
+```
+
+## 📚 Helpful Docs
+
+- [`docs/architecture.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO%20PROJECTS/Context-Lake/docs/architecture.md)
+- [`docs/data-model.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO%20PROJECTS/Context-Lake/docs/data-model.md)
+- [`docs/event-catalog.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO%20PROJECTS/Context-Lake/docs/event-catalog.md)
+- [`docs/ingestion.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO%20PROJECTS/Context-Lake/docs/ingestion.md)
+- [`docs/projections.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO%20PROJECTS/Context-Lake/docs/projections.md)
+- [`docs/context-query.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO%20PROJECTS/Context-Lake/docs/context-query.md)
+- [`docs/operations-runbook.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO%20PROJECTS/Context-Lake/docs/operations-runbook.md)
+- [`docs/deployment-readiness.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO%20PROJECTS/Context-Lake/docs/deployment-readiness.md)
+- [`docs/load-testing.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO%20PROJECTS/Context-Lake/docs/load-testing.md)
+
+## 🧾 Full Local Validation
+
+If you want to verify the full repo:
 
 ```bash
 pnpm install
@@ -199,3 +350,9 @@ pnpm build
 docker compose config
 docker compose -f docker-compose.yml -f docker-compose.prod.yml config
 ```
+
+## ⚠️ Notes
+
+- This repo is **great for demos, development, and architecture reviews**
+- Docker Compose here is **not a full production deployment**
+- HA Kafka, secret managers, managed Postgres failover, and durable object storage are still future work
