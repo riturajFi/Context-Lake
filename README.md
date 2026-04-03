@@ -1,6 +1,17 @@
 # Context Lake
 
-Production-oriented monorepo skeleton for a real-time context engine for AI agents. This milestone sets up local developer experience, shared runtime foundations, and Dockerized infrastructure only.
+Production-oriented monorepo for a multi-tenant, event-driven context engine for AI agents.
+
+The repository currently includes:
+
+- transactional ingestion with idempotency and an outbox relay
+- Kafka-backed projections into materialized context views
+- a governed context query API
+- append-only audit persistence
+- shared auth, logging, metrics, and tracing foundations
+- CI, image build, replay, resilience, and load-test basics
+
+This is not a full production platform yet. Local Docker Compose is for development and deployment rehearsal only.
 
 ## Repository Structure
 
@@ -12,26 +23,33 @@ services/
   audit-writer/
 packages/
   shared-config/
-  shared-types/
-  shared-logging/
-  shared-http/
+  shared-db/
   shared-events/
+  shared-http/
+  shared-logging/
+  shared-observability/
+  shared-types/
 infra/
   docker/
+  load/
+  postgres/
   scripts/
 docs/
 ```
 
-## Stack
+## Core Services
 
-- Node.js + TypeScript
-- pnpm workspaces
-- Fastify for HTTP services
-- Pino for structured JSON logging
-- Zod + dotenv for environment validation
-- Docker Compose for local infrastructure
+- `ingest-api`
+  - write entrypoint for customers, orders, and agent sessions
+  - transactional outbox relay
+- `stream-processor`
+  - Kafka consumers and projection builders
+- `context-query-api`
+  - low-latency read API over materialized views
+- `audit-writer`
+  - immutable audit log persistence from Kafka
 
-## Local Infrastructure
+## Local Stack
 
 `docker compose up` starts:
 
@@ -41,190 +59,11 @@ docs/
 - Kafka UI
 - Redis
 - MinIO
+- Prometheus
+- Grafana
+- Jaeger
 
-## Environment Setup
-
-1. Install Node.js 20+ and pnpm 10+.
-2. Install dependencies:
-
-```bash
-pnpm install
-```
-
-3. Copy service environment files:
-
-```bash
-bash infra/scripts/copy-env.sh
-```
-
-4. Start infrastructure:
-
-```bash
-docker compose up -d
-```
-
-5. Start all apps in watch mode:
-
-```bash
-pnpm dev
-```
-
-## Service Ports
-
-- `ingest-api`: `3001`
-- `context-query-api`: `3002`
-- `audit-writer admin`: `3003`
-- `stream-processor admin`: `3004`
-- `grafana`: `3005`
-- `kafka-ui`: `8080`
-- `prometheus`: `9090`
-- `jaeger`: `16686`
-- `minio`: `9000`
-- `minio-console`: `9001`
-
-## Health Endpoints
-
-- `GET http://localhost:3001/health`
-- `GET http://localhost:3002/health`
-- `GET http://localhost:3003/health`
-- `GET http://localhost:3004/health`
-
-Each API health endpoint performs dependency reachability checks for the services it needs at this stage.
-
-## Developer Commands
-
-- `pnpm install`
-- `pnpm dev`
-- `pnpm lint`
-- `pnpm test`
-- `pnpm typecheck`
-- `pnpm build`
-- `pnpm db:migrate`
-- `pnpm db:seed`
-- `pnpm db:migrate:smoke`
-- `pnpm db:outbox`
-- `pnpm db:projections`
-- `pnpm stream:replay`
-- `pnpm compose:up`
-- `pnpm compose:down`
-- `pnpm compose:logs`
-
-Make equivalents are also available:
-
-- `make install`
-- `make dev`
-- `make lint`
-- `make test`
-- `make typecheck`
-- `make build`
-- `make db-migrate`
-- `make db-seed`
-- `make db-migrate-smoke`
-- `make db-outbox`
-- `make db-projections`
-- `make stream-replay`
-- `make compose-up`
-- `make compose-down`
-- `make compose-logs`
-
-## Milestone 2: Contracts And Persistence
-
-This repository now includes:
-
-- Versioned v1 event envelopes and schemas in [`packages/shared-events/src/index.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/packages/shared-events/src/index.ts)
-- Postgres schema migration in [`infra/postgres/migrations/001_initial_schema.sql`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/infra/postgres/migrations/001_initial_schema.sql)
-- Local development seed data in [`infra/postgres/seeds/001_dev_seed.sql`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/infra/postgres/seeds/001_dev_seed.sql)
-- Migration and seed runners in [`infra/scripts/migrate.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/infra/scripts/migrate.ts) and [`infra/scripts/seed.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/infra/scripts/seed.ts)
-- Typed query helpers and repository foundations in [`packages/shared-db/src/repositories.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/packages/shared-db/src/repositories.ts)
-
-### Migration Commands
-
-Assuming `.env` contains `POSTGRES_URL`:
-
-```bash
-pnpm db:migrate
-pnpm db:seed
-pnpm db:migrate:smoke
-```
-
-### Topic List
-
-- `customer-events`
-- `order-events`
-- `agent-events`
-- `audit-events`
-
-### Schema List
-
-- `customers`
-- `orders`
-- `agent_sessions`
-- `agent_audit_logs`
-- `ingestion_requests`
-- `idempotency_keys`
-- `outbox_events`
-- `schema_migrations`
-
-### Migration List
-
-- `001_initial_schema.sql`
-
-### Additional Docs
-
-- [`docs/data-model.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/data-model.md)
-- [`docs/event-catalog.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/event-catalog.md)
-- [`docs/ingestion.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/ingestion.md)
-- [`docs/projections.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/projections.md)
-- [`docs/context-query.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/context-query.md)
-
-## Milestone 4: Stream Processing
-
-Implemented in this repo:
-
-- Kafka consumers for `customer-events`, `order-events`, and `agent-events`
-- Projection handlers for v1 event types
-- Materialized context tables:
-  - `customer_context_view`
-  - `order_context_view`
-  - `agent_session_context_view`
-- Dedupe ledger:
-  - `projection_event_applications`
-- Poison event storage:
-  - `projection_dead_letters`
-- Replay reset support from earliest offsets
-
-### Replay Projections Locally
-
-```bash
-pnpm stream:replay
-```
-
-### Inspect Projection Tables
-
-```bash
-pnpm db:projections
-```
-
-## Milestone 3: Ingestion Path
-
-Implemented in this repo:
-
-- `POST /ingest/customer`
-- `POST /ingest/order`
-- `POST /ingest/agent-session`
-- `GET /health`
-- Transactional writes of domain row + outbox row + ingestion record + idempotency ledger
-- Background outbox relay inside `ingest-api`
-- Kafka publish abstraction in [`packages/shared-events/src/index.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/packages/shared-events/src/index.ts)
-- Integration tests for happy path, duplicate requests, DB failure rollback, Kafka unavailable, and retry behavior
-
-### Inspecting Outbox Backlog
-
-```bash
-pnpm db:outbox
-```
-
-### Run Order For Local Testing
+## Local Startup
 
 ```bash
 pnpm install
@@ -235,85 +74,118 @@ pnpm db:seed
 pnpm dev
 ```
 
-## Milestone 5: Context Serving API
+## Ports
 
-Implemented in this repo:
+- `ingest-api`: `3001`
+- `context-query-api`: `3002`
+- `audit-writer` admin: `3003`
+- `stream-processor` admin: `3004`
+- `grafana`: `3005`
+- `kafka-ui`: `8080`
+- `prometheus`: `9090`
+- `jaeger`: `16686`
+- `minio`: `9000`
+- `minio-console`: `9001`
 
-- `GET /context/customer/:customerId`
-- `GET /context/order/:orderId`
-- `GET /context/agent-session/:sessionId`
-- `POST /context/batch`
-- `GET /health`
-- Tenant-aware server-side request handling via `x-tenant-id`
-- Bounded embedded related lists and audit references
-- Request timing metrics and slow request logging
-- Shared internal HTTP helper for context-query callers
+## Probes And Metrics
 
-### Example Local Reads
+Liveness:
 
-```bash
-curl -H 'x-tenant-id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' \
-  http://localhost:3002/context/customer/11111111-1111-4111-8111-111111111111
+- `GET http://localhost:3001/health`
+- `GET http://localhost:3002/health`
+- `GET http://localhost:3003/health`
+- `GET http://localhost:3004/health`
 
-curl -X POST http://localhost:3002/context/batch \
-  -H 'content-type: application/json' \
-  -H 'x-tenant-id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' \
-  -d '{
-    "items": [
-      { "entity_type": "customer", "entity_id": "11111111-1111-4111-8111-111111111111" },
-      { "entity_type": "order", "entity_id": "22222222-2222-4222-8222-222222222222" }
-    ],
-    "audit_limit": 3,
-    "related_limit": 3
-  }'
-```
+Readiness:
 
-## Milestone 6: Auditability, Security, And Observability
+- `GET http://localhost:3001/ready`
+- `GET http://localhost:3002/ready`
+- `GET http://localhost:3003/ready`
+- `GET http://localhost:3004/ready`
 
-Implemented in this repo:
+Metrics:
 
-- Bearer token or `x-api-key` auth for `ingest-api` and `context-query-api`
-- Server-side tenant enforcement and fixed-window rate limiting
-- `x-trace-id` propagation over HTTP plus `trace_id` and `request_id` propagation over Kafka
-- Context access audit emission from `context-query-api`
-- Kafka-backed `audit-writer` that persists immutable audit rows
-- Structured log redaction for auth headers and common sensitive fields
-- Prometheus metrics endpoints on APIs and worker admin ports
-- Jaeger OTLP ingestion and starter Grafana dashboards
-- DB pool, request latency, publish, lag, and failure visibility
+- `GET http://localhost:3001/metrics`
+- `GET http://localhost:3002/metrics`
+- `GET http://localhost:3003/metrics`
+- `GET http://localhost:3004/metrics`
 
-### Auth Header Example
+## Developer Commands
 
-```bash
-curl -H 'authorization: Bearer context-lake-local-dev-token' \
-  -H 'x-tenant-id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' \
-  http://localhost:3002/context/customer/11111111-1111-4111-8111-111111111111
-```
+- `pnpm lint`
+- `pnpm test`
+- `pnpm test:unit`
+- `pnpm test:integration`
+- `pnpm test:contracts`
+- `pnpm test:resilience`
+- `pnpm typecheck`
+- `pnpm build`
+- `pnpm validate:full`
+- `pnpm db:migrate`
+- `pnpm db:seed`
+- `pnpm db:migrate:smoke`
+- `pnpm db:outbox`
+- `pnpm db:projections`
+- `pnpm stream:replay`
+- `pnpm load:ingest`
+- `pnpm load:context`
+- `pnpm compose:up`
+- `pnpm compose:up:prod`
+- `pnpm compose:down`
+- `pnpm compose:logs`
 
-### Observability UI
+Make targets mirror the same commands.
 
-- Grafana: `http://localhost:3005`
-- Prometheus: `http://localhost:9090`
-- Jaeger: `http://localhost:16686`
+## CI And Images
 
-### Runbook
+- [`.github/workflows/ci.yml`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/.github/workflows/ci.yml)
+  - install, lint, typecheck, unit, integration, contract, resilience, build
+- [`.github/workflows/docker-images.yml`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/.github/workflows/docker-images.yml)
+  - builds one Docker image per service
+  - runs on pull requests, `main`, and tags matching `v*.*.*`
 
+## Production-Readiness Notes
+
+What the repo is ready for:
+
+- repeatable local validation
+- contract and replay testing
+- production-like Docker image builds
+- readiness and liveness probes
+- backup and restore guidance for Postgres
+- deployment ordering and rollback notes
+
+What it is not yet:
+
+- Kubernetes-ready
+- integrated with a secret manager
+- backed by HA Kafka
+- backed by managed Postgres failover
+- backed by durable production object storage
+
+## Key Docs
+
+- [`docs/architecture.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/architecture.md)
+- [`docs/data-model.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/data-model.md)
+- [`docs/event-catalog.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/event-catalog.md)
+- [`docs/ingestion.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/ingestion.md)
+- [`docs/projections.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/projections.md)
+- [`docs/context-query.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/context-query.md)
 - [`docs/operations-runbook.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/operations-runbook.md)
+- [`docs/deployment-readiness.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/deployment-readiness.md)
+- [`docs/load-testing.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/load-testing.md)
 
-## Current Scope
+## Full Local Validation
 
-Included in this milestone:
-
-- Bootable API and worker services
-- Shared config, logging, HTTP bootstrap, types, and event constants
-- Request ID propagation for HTTP APIs
-- Graceful shutdown handling
-- Dependency-aware API health checks
-- Docker Compose infrastructure with health checks and named volumes
-
-Explicitly not included yet:
-
-- Domain logic
-- Authentication
-- Database schema or migrations
-- Kafka producers or consumers beyond connectivity checks
+```bash
+pnpm install
+pnpm lint
+pnpm test:unit
+pnpm test:integration
+pnpm test:contracts
+pnpm test:resilience
+pnpm typecheck
+pnpm build
+docker compose config
+docker compose -f docker-compose.yml -f docker-compose.prod.yml config
+```
