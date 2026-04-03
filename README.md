@@ -168,6 +168,7 @@ pnpm db:migrate:smoke
 - [`docs/event-catalog.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/event-catalog.md)
 - [`docs/ingestion.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/ingestion.md)
 - [`docs/projections.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/projections.md)
+- [`docs/context-query.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/context-query.md)
 
 ## Milestone 4: Stream Processing
 
@@ -225,6 +226,39 @@ pnpm compose:up
 pnpm db:migrate
 pnpm db:seed
 pnpm dev
+```
+
+## Milestone 5: Context Serving API
+
+Implemented in this repo:
+
+- `GET /context/customer/:customerId`
+- `GET /context/order/:orderId`
+- `GET /context/agent-session/:sessionId`
+- `POST /context/batch`
+- `GET /health`
+- Tenant-aware server-side request handling via `x-tenant-id`
+- Bounded embedded related lists and audit references
+- Request timing metrics and slow request logging
+- Shared internal HTTP helper for context-query callers
+
+### Example Local Reads
+
+```bash
+curl -H 'x-tenant-id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' \
+  http://localhost:3002/context/customer/11111111-1111-4111-8111-111111111111
+
+curl -X POST http://localhost:3002/context/batch \
+  -H 'content-type: application/json' \
+  -H 'x-tenant-id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' \
+  -d '{
+    "items": [
+      { "entity_type": "customer", "entity_id": "11111111-1111-4111-8111-111111111111" },
+      { "entity_type": "order", "entity_id": "22222222-2222-4222-8222-222222222222" }
+    ],
+    "audit_limit": 3,
+    "related_limit": 3
+  }'
 ```
 
 ## Current Scope
