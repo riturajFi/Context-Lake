@@ -1,0 +1,31 @@
+{
+  "name": "context-lake",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.8.1",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "install": "node -e \"console.log('Run pnpm install from the repository root to install workspace dependencies.')\"",
+    "dev": "pnpm -r --parallel --filter \"./packages/*\" --filter \"./services/*\" dev",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "typecheck": "tsc -b --pretty false",
+    "build": "tsc -b",
+    "compose:up": "docker compose up -d",
+    "compose:down": "docker compose down",
+    "compose:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "@types/node": "^22.14.0",
+    "@types/pg": "^8.11.11",
+    "eslint": "^9.23.0",
+    "eslint-config-prettier": "^10.1.1",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.28.0"
+  }
+}

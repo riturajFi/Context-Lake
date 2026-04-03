@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/shared-types" },
+    { "path": "./packages/shared-events" },
+    { "path": "./packages/shared-logging" },
+    { "path": "./packages/shared-config" },
+    { "path": "./packages/shared-http" },
+    { "path": "./services/ingest-api" },
+    { "path": "./services/context-query-api" },
+    { "path": "./services/stream-processor" },
+    { "path": "./services/audit-writer" }
+  ]
+}

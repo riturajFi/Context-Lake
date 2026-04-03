@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "baseUrl": ".",
+    "paths": {
+      "@context-lake/shared-config": ["packages/shared-config/src/index.ts"],
+      "@context-lake/shared-events": ["packages/shared-events/src/index.ts"],
+      "@context-lake/shared-http": ["packages/shared-http/src/index.ts"],
+      "@context-lake/shared-logging": ["packages/shared-logging/src/index.ts"],
+      "@context-lake/shared-types": ["packages/shared-types/src/index.ts"]
+    },
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true
+  }
+}
