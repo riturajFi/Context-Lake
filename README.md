@@ -44,7 +44,7 @@ docs/
 
 ## Environment Setup
 
-1. Install Node.js 22+ and pnpm 10+.
+1. Install Node.js 20+ and pnpm 10+.
 2. Install dependencies:
 
 ```bash
@@ -92,6 +92,9 @@ Each API health endpoint performs dependency reachability checks for the service
 - `pnpm test`
 - `pnpm typecheck`
 - `pnpm build`
+- `pnpm db:migrate`
+- `pnpm db:seed`
+- `pnpm db:migrate:smoke`
 - `pnpm compose:up`
 - `pnpm compose:down`
 - `pnpm compose:logs`
@@ -104,9 +107,59 @@ Make equivalents are also available:
 - `make test`
 - `make typecheck`
 - `make build`
+- `make db-migrate`
+- `make db-seed`
+- `make db-migrate-smoke`
 - `make compose-up`
 - `make compose-down`
 - `make compose-logs`
+
+## Milestone 2: Contracts And Persistence
+
+This repository now includes:
+
+- Versioned v1 event envelopes and schemas in [`packages/shared-events/src/index.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/packages/shared-events/src/index.ts)
+- Postgres schema migration in [`infra/postgres/migrations/001_initial_schema.sql`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/infra/postgres/migrations/001_initial_schema.sql)
+- Local development seed data in [`infra/postgres/seeds/001_dev_seed.sql`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/infra/postgres/seeds/001_dev_seed.sql)
+- Migration and seed runners in [`infra/scripts/migrate.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/infra/scripts/migrate.ts) and [`infra/scripts/seed.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/infra/scripts/seed.ts)
+- Typed query helpers and repository foundations in [`packages/shared-db/src/repositories.ts`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/packages/shared-db/src/repositories.ts)
+
+### Migration Commands
+
+Assuming `.env` contains `POSTGRES_URL`:
+
+```bash
+pnpm db:migrate
+pnpm db:seed
+pnpm db:migrate:smoke
+```
+
+### Topic List
+
+- `customer-events`
+- `order-events`
+- `agent-events`
+- `audit-events`
+
+### Schema List
+
+- `customers`
+- `orders`
+- `agent_sessions`
+- `agent_audit_logs`
+- `ingestion_requests`
+- `idempotency_keys`
+- `outbox_events`
+- `schema_migrations`
+
+### Migration List
+
+- `001_initial_schema.sql`
+
+### Additional Docs
+
+- [`docs/data-model.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/data-model.md)
+- [`docs/event-catalog.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/event-catalog.md)
 
 ## Current Scope
 

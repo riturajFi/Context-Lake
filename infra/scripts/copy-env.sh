@@ -9,6 +9,9 @@ services=(
   "services/audit-writer"
 )
 
+cp ".env.example" ".env"
+echo "created .env"
+
 for service in "${services[@]}"; do
   cp "${service}/.env.example" "${service}/.env"
   echo "created ${service}/.env"
