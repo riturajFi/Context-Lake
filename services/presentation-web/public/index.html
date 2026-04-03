@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Context Lake Presentation</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <nav class="topbar">
+          <div class="brand">
+            <span class="brand-mark">CL</span>
+            <div>
+              <p class="eyebrow">Production-grade context engine</p>
+              <h1>Context Lake</h1>
+            </div>
+          </div>
+          <a class="ghost-link" href="https://github.com" rel="noreferrer">Monorepo Demo</a>
+        </nav>
+
+        <section class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Presentable system overview</p>
+            <h2>Event-driven context for AI agents, built to be shown live.</h2>
+            <p class="lede">
+              Context Lake ingests operational data, publishes durable events, projects
+              materialized views for low-latency reads, and preserves traceable audit paths
+              across every request.
+            </p>
+
+            <div class="hero-actions">
+              <a class="primary-button" href="#runtime">View live runtime</a>
+              <a class="secondary-button" href="#journey">Follow the request path</a>
+            </div>
+
+            <ul class="signal-list">
+              <li>Transactional outbox for reliable publication</li>
+              <li>Kafka-backed projections for fast context serving</li>
+              <li>Immutable audit trail with request and trace propagation</li>
+            </ul>
+          </div>
+
+          <div class="hero-panel">
+            <div class="panel-header">
+              <p class="eyebrow">Core path</p>
+              <span class="status-pill" id="hero-status">Checking runtime</span>
+            </div>
+            <div class="flow-map">
+              <div class="flow-node accent-a">External systems</div>
+              <div class="flow-arrow"></div>
+              <div class="flow-node accent-b">Ingest API</div>
+              <div class="flow-arrow"></div>
+              <div class="flow-node accent-c">Kafka + Outbox</div>
+              <div class="flow-arrow"></div>
+              <div class="flow-node accent-d">Projections</div>
+              <div class="flow-arrow"></div>
+              <div class="flow-node accent-e">Context API</div>
+            </div>
+            <div class="panel-metrics">
+              <article>
+                <span class="metric-label">Topics</span>
+                <strong>4</strong>
+              </article>
+              <article>
+                <span class="metric-label">Services</span>
+                <strong>5</strong>
+              </article>
+              <article>
+                <span class="metric-label">Read models</span>
+                <strong>3</strong>
+              </article>
+            </div>
+          </div>
+        </section>
+      </header>
+
+      <main>
+        <section class="section" id="runtime">
+          <div class="section-heading">
+            <p class="eyebrow">Live runtime</p>
+            <h3>Current service health and readiness</h3>
+            <p>
+              The presentation layer polls the local services and shows the current operating
+              picture without requiring browser access to cross-origin API ports.
+            </p>
+          </div>
+
+          <div class="runtime-grid">
+            <div class="runtime-summary card">
+              <p class="metric-label">System status</p>
+              <h4 id="system-status">Loading</h4>
+              <p id="runtime-generated-at">Waiting for runtime snapshot</p>
+            </div>
+            <div class="runtime-summary card">
+              <p class="metric-label">Presentation URL</p>
+              <h4>http://localhost:3010</h4>
+              <p>Single-screen overview for demos, walkthroughs, and architecture reviews.</p>
+            </div>
+          </div>
+
+          <div class="service-grid" id="service-grid"></div>
+        </section>
+
+        <section class="section architecture-grid" id="journey">
+          <div class="section-heading">
+            <p class="eyebrow">Request lifecycle</p>
+            <h3>From external write to governed agent context</h3>
+          </div>
+
+          <article class="journey-card card">
+            <span class="step-badge">01</span>
+            <h4>Ingest</h4>
+            <p>Thin API validates auth, tenant, and idempotency. A single transaction writes the domain row, ingestion record, idempotency key, and outbox row.</p>
+          </article>
+          <article class="journey-card card">
+            <span class="step-badge">02</span>
+            <h4>Publish</h4>
+            <p>Outbox relay polls pending rows and publishes versioned envelopes to Kafka, preserving request, trace, and tenant metadata end to end.</p>
+          </article>
+          <article class="journey-card card">
+            <span class="step-badge">03</span>
+            <h4>Project</h4>
+            <p>Stream processor validates envelopes, deduplicates repeated delivery, and upserts tenant-scoped materialized views for low-latency reads.</p>
+          </article>
+          <article class="journey-card card">
+            <span class="step-badge">04</span>
+            <h4>Serve</h4>
+            <p>Context query API assembles agent-friendly payloads from projections and bounded audit references instead of exposing raw internal tables.</p>
+          </article>
+          <article class="journey-card card">
+            <span class="step-badge">05</span>
+            <h4>Audit</h4>
+            <p>Audit writer consumes audit and agent events, then persists immutable rows for compliance review, trace reconstruction, and operator debugging.</p>
+          </article>
+        </section>
+
+        <section class="section split-layout">
+          <div class="card">
+            <p class="eyebrow">Topics</p>
+            <h3>Kafka topology</h3>
+            <ul class="bullet-list">
+              <li><strong>customer-events</strong> for customer lifecycle changes</li>
+              <li><strong>order-events</strong> for order creation and status transitions</li>
+              <li><strong>agent-events</strong> for session, context request, and response generation activity</li>
+              <li><strong>audit-events</strong> for durable audit history</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <p class="eyebrow">Read layer</p>
+            <h3>Projection tables</h3>
+            <ul class="bullet-list">
+              <li><strong>customer_context_view</strong> for customer-centric context</li>
+              <li><strong>order_context_view</strong> for order state and history metadata</li>
+              <li><strong>agent_session_context_view</strong> for agent session state</li>
+              <li><strong>projection_dead_letters</strong> for poison event inspection</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="section split-layout">
+          <div class="card terminal-card">
+            <p class="eyebrow">Demo commands</p>
+            <h3>Useful during a presentation</h3>
+            <pre><code>pnpm compose:up
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
+
+curl http://localhost:3010/api/runtime
+curl http://localhost:3001/ready
+curl http://localhost:3002/ready</code></pre>
+          </div>
+
+          <div class="card">
+            <p class="eyebrow">Production posture</p>
+            <h3>What this demo proves</h3>
+            <div class="capability-list">
+              <div>
+                <span>Reliability</span>
+                <p>Transactional outbox, idempotent writes, projection dedupe, replay support.</p>
+              </div>
+              <div>
+                <span>Governance</span>
+                <p>Tenant enforcement, structured audit trails, stable API errors, bounded responses.</p>
+              </div>
+              <div>
+                <span>Observability</span>
+                <p>Metrics, traces, readiness probes, lag visibility, and operator runbooks.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
