@@ -1,0 +1,20 @@
+{
+  "name": "@context-lake/shared-http",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsc -b --watch --preserveWatchOutput",
+    "lint": "eslint src --ext .ts",
+    "test": "node --test",
+    "typecheck": "tsc -b --pretty false",
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@context-lake/shared-logging": "workspace:*",
+    "@context-lake/shared-types": "workspace:*",
+    "fastify": "^5.2.1"
+  }
+}

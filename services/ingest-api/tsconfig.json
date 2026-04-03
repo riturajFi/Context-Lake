@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "composite": true,
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../packages/shared-config" },
+    { "path": "../../packages/shared-http" },
+    { "path": "../../packages/shared-logging" },
+    { "path": "../../packages/shared-types" }
+  ]
+}
