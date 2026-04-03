@@ -96,6 +96,8 @@ Each API health endpoint performs dependency reachability checks for the service
 - `pnpm db:seed`
 - `pnpm db:migrate:smoke`
 - `pnpm db:outbox`
+- `pnpm db:projections`
+- `pnpm stream:replay`
 - `pnpm compose:up`
 - `pnpm compose:down`
 - `pnpm compose:logs`
@@ -112,6 +114,8 @@ Make equivalents are also available:
 - `make db-seed`
 - `make db-migrate-smoke`
 - `make db-outbox`
+- `make db-projections`
+- `make stream-replay`
 - `make compose-up`
 - `make compose-down`
 - `make compose-logs`
@@ -163,6 +167,35 @@ pnpm db:migrate:smoke
 - [`docs/data-model.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/data-model.md)
 - [`docs/event-catalog.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/event-catalog.md)
 - [`docs/ingestion.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/ingestion.md)
+- [`docs/projections.md`](/home/riturajtripathy/Documents/_Code/personal_projects/PORTFOLIO PROJECTS/Context-Lake/docs/projections.md)
+
+## Milestone 4: Stream Processing
+
+Implemented in this repo:
+
+- Kafka consumers for `customer-events`, `order-events`, and `agent-events`
+- Projection handlers for v1 event types
+- Materialized context tables:
+  - `customer_context_view`
+  - `order_context_view`
+  - `agent_session_context_view`
+- Dedupe ledger:
+  - `projection_event_applications`
+- Poison event storage:
+  - `projection_dead_letters`
+- Replay reset support from earliest offsets
+
+### Replay Projections Locally
+
+```bash
+pnpm stream:replay
+```
+
+### Inspect Projection Tables
+
+```bash
+pnpm db:projections
+```
 
 ## Milestone 3: Ingestion Path
 

@@ -17,6 +17,8 @@
     "db:seed": "tsx infra/scripts/seed.ts",
     "db:migrate:smoke": "pnpm --filter @context-lake/shared-db test",
     "db:outbox": "tsx infra/scripts/outbox-status.ts",
+    "db:projections": "tsx infra/scripts/projection-status.ts",
+    "stream:replay": "tsx infra/scripts/replay-projections.ts",
     "compose:up": "docker compose up -d",
     "compose:down": "docker compose down",
     "compose:logs": "docker compose logs -f"
