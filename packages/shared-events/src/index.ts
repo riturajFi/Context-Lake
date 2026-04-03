@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Kafka, type Producer } from 'kafkajs';
 
 import type { EntityType, TopicName } from '@context-lake/shared-types';
 
@@ -252,6 +253,49 @@ export const eventEnvelopeSchema = z.discriminatedUnion('event_type', [
 export type EventEnvelope = z.infer<typeof eventEnvelopeSchema>;
 export type EventCatalog = typeof eventCatalog;
 
+export interface PublishableEvent {
+  topic: TopicName;
+  key: string;
+  event: EventEnvelope;
+  headers?: Record<string, string>;
+}
+
+export interface EventPublisher {
+  publish(message: PublishableEvent): Promise<void>;
+  disconnect?(): Promise<void>;
+}
+
 export function validateEventEnvelope(input: unknown): EventEnvelope {
   return eventEnvelopeSchema.parse(input);
+}
+
+export async function createKafkaEventPublisher(config: {
+  clientId: string;
+  brokers: string[];
+}): Promise<EventPublisher> {
+  const kafka = new Kafka({
+    clientId: config.clientId,
+    brokers: config.brokers,
+  });
+
+  const producer: Producer = kafka.producer();
+  await producer.connect();
+
+  return {
+    async publish(message) {
+      await producer.send({
+        topic: message.topic,
+        messages: [
+          {
+            key: message.key,
+            value: JSON.stringify(message.event),
+            headers: message.headers,
+          },
+        ],
+      });
+    },
+    async disconnect() {
+      await producer.disconnect();
+    },
+  };
 }

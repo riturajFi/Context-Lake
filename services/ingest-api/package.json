@@ -8,15 +8,22 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "lint": "eslint src --ext .ts",
-    "test": "node --test",
+    "test": "node --import tsx --test test/*.test.ts",
     "typecheck": "tsc -b --pretty false",
     "build": "tsc -b"
   },
   "dependencies": {
     "@context-lake/shared-config": "workspace:*",
+    "@context-lake/shared-db": "workspace:*",
+    "@context-lake/shared-events": "workspace:*",
     "@context-lake/shared-http": "workspace:*",
     "@context-lake/shared-logging": "workspace:*",
     "@context-lake/shared-types": "workspace:*",
-    "fastify": "^5.2.1"
+    "fastify": "^5.2.1",
+    "pg": "^8.14.1",
+    "pino": "^9.6.0"
+  },
+  "devDependencies": {
+    "pg-mem": "^3.0.5"
   }
 }

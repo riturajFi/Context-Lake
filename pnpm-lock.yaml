@@ -84,6 +84,9 @@ importers:
       '@context-lake/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       zod:
         specifier: ^3.24.2
         version: 3.25.76
@@ -143,6 +146,12 @@ importers:
       '@context-lake/shared-config':
         specifier: workspace:*
         version: link:../../packages/shared-config
+      '@context-lake/shared-db':
+        specifier: workspace:*
+        version: link:../../packages/shared-db
+      '@context-lake/shared-events':
+        specifier: workspace:*
+        version: link:../../packages/shared-events
       '@context-lake/shared-http':
         specifier: workspace:*
         version: link:../../packages/shared-http
@@ -155,6 +164,16 @@ importers:
       fastify:
         specifier: ^5.2.1
         version: 5.8.4
+      pg:
+        specifier: ^8.14.1
+        version: 8.20.0
+      pino:
+        specifier: ^9.6.0
+        version: 9.14.0
+    devDependencies:
+      pg-mem:
+        specifier: ^3.0.5
+        version: 3.0.14
 
   services/stream-processor:
     dependencies:

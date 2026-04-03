@@ -63,10 +63,17 @@ export interface IngestionRequestRow {
   trace_id: string;
   idempotency_key: string | null;
   payload: Record<string, unknown>;
+  resource_type: string | null;
+  resource_id: string | null;
   requested_at: string;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ResourcePointer {
+  resource_type: 'customer' | 'order' | 'agent_session';
+  resource_id: string;
 }
 
 export interface IdempotencyKeyRow {

@@ -7,6 +7,8 @@ export interface SqlExecutor {
   ): Promise<QueryResult<T>>;
 }
 
+export type DbTransaction = PoolClient;
+
 export function createDbPool(connectionString: string) {
   return new Pool({
     connectionString,

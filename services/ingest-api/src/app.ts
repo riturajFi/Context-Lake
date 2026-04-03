@@ -1,0 +1,230 @@
+import {
+  checkKafka,
+  checkMinio,
+  checkPostgres,
+  checkRedis,
+  loadConfig,
+  z,
+} from '@context-lake/shared-config';
+import { createDbPool, createRepositoryContext } from '@context-lake/shared-db';
+import { createKafkaEventPublisher } from '@context-lake/shared-events';
+import { createHttpApp } from '@context-lake/shared-http';
+import type { HealthStatus } from '@context-lake/shared-types';
+import type { FastifyReply, FastifyRequest } from 'fastify';
+
+import {
+  agentSessionIngestRequestSchema,
+  customerIngestRequestSchema,
+  idempotencyHeaderSchema,
+  orderIngestRequestSchema,
+  tenantHeaderSchema,
+} from './contracts.js';
+import { ApiError } from './errors.js';
+import { IngestionMetrics } from './metrics.js';
+import { OutboxRelay } from './relay.js';
+import { IngestService } from './service.js';
+import { buildTraceContext } from './tracing.js';
+
+export const ingestApiConfigSchema = z.object({
+  PORT: z.coerce.number().int().positive().default(3001),
+  HOST: z.string().default('0.0.0.0'),
+  OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(3000),
+  OUTBOX_BATCH_SIZE: z.coerce.number().int().positive().default(25),
+  OUTBOX_MAX_RETRY_DELAY_SECONDS: z.coerce.number().int().positive().default(60),
+});
+
+export type IngestApiConfig = ReturnType<typeof loadIngestApiConfig>;
+
+export function loadIngestApiConfig() {
+  return loadConfig(ingestApiConfigSchema);
+}
+
+export async function createIngestApp(config = loadIngestApiConfig()) {
+  const app = createHttpApp({
+    serviceName: 'ingest-api',
+    logLevel: config.LOG_LEVEL,
+  });
+  const metrics = new IngestionMetrics();
+  const pool = createDbPool(config.POSTGRES_URL);
+  const publisher = await createKafkaEventPublisher({
+    clientId: 'context-lake-ingest-api',
+    brokers: config.KAFKA_BROKERS.split(','),
+  });
+  const relay = new OutboxRelay({
+    pool,
+    publisher,
+    logger: app.log,
+    metrics,
+    pollIntervalMs: config.OUTBOX_POLL_INTERVAL_MS,
+    batchSize: config.OUTBOX_BATCH_SIZE,
+    maxRetryDelaySeconds: config.OUTBOX_MAX_RETRY_DELAY_SECONDS,
+  });
+  const service = new IngestService({
+    pool,
+    logger: app.log,
+    metrics,
+  });
+
+  async function getDependencyChecks() {
+    const checks = await Promise.allSettled([
+      checkPostgres(config.POSTGRES_URL),
+      checkRedis(config.REDIS_URL),
+      checkKafka(config.KAFKA_BROKERS.split(',')),
+      checkMinio({
+        endPoint: config.MINIO_ENDPOINT,
+        port: config.MINIO_PORT,
+        useSSL: config.MINIO_USE_SSL,
+        accessKey: config.MINIO_ACCESS_KEY,
+        secretKey: config.MINIO_SECRET_KEY,
+      }),
+    ]);
+
+    const pending = await createRepositoryContext(pool).outbox.countPending();
+    metrics.setOutboxPendingCount(pending);
+
+    return {
+      postgres: checks[0].status === 'fulfilled' ? 'up' : 'down',
+      redis: checks[1].status === 'fulfilled' ? 'up' : 'down',
+      kafka: checks[2].status === 'fulfilled' ? 'up' : 'down',
+      minio: checks[3].status === 'fulfilled' ? 'up' : 'down',
+    } as const;
+  }
+
+  function getHeaders(request: FastifyRequest) {
+    const tenantHeader = request.headers['x-tenant-id'];
+    const idempotencyHeader = request.headers['idempotency-key'];
+    const actorHeader = request.headers['x-actor-id'];
+
+    if (!tenantHeader) {
+      throw new ApiError(400, 'MISSING_TENANT_ID', 'x-tenant-id header is required');
+    }
+
+    if (!idempotencyHeader) {
+      throw new ApiError(400, 'MISSING_IDEMPOTENCY_KEY', 'idempotency-key header is required');
+    }
+
+    return {
+      tenantId: tenantHeaderSchema.parse(tenantHeader),
+      idempotencyKey: idempotencyHeaderSchema.parse(idempotencyHeader),
+      actorId: actorHeader ? z.string().uuid().parse(actorHeader) : undefined,
+    };
+  }
+
+  app.get('/health', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const checks = await getDependencyChecks();
+    const status: HealthStatus & { metrics: ReturnType<typeof metrics.snapshot> } = {
+      status: Object.values(checks).every((value) => value === 'up') ? 'ok' : 'degraded',
+      service: 'ingest-api',
+      checks,
+      timestamp: new Date().toISOString(),
+      metrics: metrics.snapshot(),
+    };
+
+    reply.code(status.status === 'ok' ? 200 : 503);
+    return status;
+  });
+
+  app.post('/ingest/customer', async (request, reply) => {
+    try {
+      const headers = getHeaders(request);
+      const payload = customerIngestRequestSchema.parse(request.body);
+      const trace = buildTraceContext(request.id, headers.tenantId);
+      const result = await service.ingestCustomer(payload, {
+        tenantId: headers.tenantId,
+        traceId: trace.traceId,
+        idempotencyKey: headers.idempotencyKey,
+        actorId: headers.actorId,
+        source: 'ingest-api',
+      });
+
+      reply.code(result.duplicate ? 200 : 202);
+      return result;
+    } catch (error) {
+      return handleApiError(error, reply, request.id);
+    }
+  });
+
+  app.post('/ingest/order', async (request, reply) => {
+    try {
+      const headers = getHeaders(request);
+      const payload = orderIngestRequestSchema.parse(request.body);
+      const trace = buildTraceContext(request.id, headers.tenantId);
+      const result = await service.ingestOrder(payload, {
+        tenantId: headers.tenantId,
+        traceId: trace.traceId,
+        idempotencyKey: headers.idempotencyKey,
+        actorId: headers.actorId,
+        source: 'ingest-api',
+      });
+
+      reply.code(result.duplicate ? 200 : 202);
+      return result;
+    } catch (error) {
+      return handleApiError(error, reply, request.id);
+    }
+  });
+
+  app.post('/ingest/agent-session', async (request, reply) => {
+    try {
+      const headers = getHeaders(request);
+      const payload = agentSessionIngestRequestSchema.parse(request.body);
+      const trace = buildTraceContext(request.id, headers.tenantId);
+      const result = await service.ingestAgentSession(payload, {
+        tenantId: headers.tenantId,
+        traceId: trace.traceId,
+        idempotencyKey: headers.idempotencyKey,
+        actorId: headers.actorId,
+        source: 'ingest-api',
+      });
+
+      reply.code(result.duplicate ? 200 : 202);
+      return result;
+    } catch (error) {
+      return handleApiError(error, reply, request.id);
+    }
+  });
+
+  app.addHook('onReady', async () => {
+    relay.start();
+  });
+
+  app.addHook('onClose', async () => {
+    await relay.stop();
+    await pool.end();
+  });
+
+  return app;
+}
+
+function handleApiError(error: unknown, reply: FastifyReply, traceId: string) {
+  if (error instanceof ApiError) {
+    reply.code(error.statusCode);
+    return {
+      error: {
+        code: error.code,
+        message: error.message,
+        trace_id: traceId,
+      },
+    };
+  }
+
+  if (error instanceof z.ZodError) {
+    reply.code(400);
+    return {
+      error: {
+        code: 'VALIDATION_ERROR' as const,
+        message: error.issues.map((issue) => issue.message).join('; '),
+        trace_id: traceId,
+      },
+    };
+  }
+
+  reply.code(500);
+  return {
+    error: {
+      code: 'INTERNAL_ERROR' as const,
+      message: 'internal server error',
+      trace_id: traceId,
+    },
+  };
+}
