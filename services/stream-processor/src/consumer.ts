@@ -98,7 +98,9 @@ export class KafkaProjectionConsumer implements ProjectionConsumerRuntime {
 
       try {
         parsed = JSON.parse(message.value) as Record<string, unknown>;
-      } catch {}
+      } catch {
+        parsed = {};
+      }
 
       await this.options.applier.deadLetter({
         consumerName: this.options.consumerName,
