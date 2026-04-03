@@ -1,0 +1,60 @@
+services:
+  ingest-api:
+    build:
+      context: .
+      dockerfile: services/ingest-api/Dockerfile
+    env_file:
+      - services/ingest-api/.env.example
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '3001:3001'
+
+  context-query-api:
+    build:
+      context: .
+      dockerfile: services/context-query-api/Dockerfile
+    env_file:
+      - services/context-query-api/.env.example
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '3002:3002'
+
+  stream-processor:
+    build:
+      context: .
+      dockerfile: services/stream-processor/Dockerfile
+    env_file:
+      - services/stream-processor/.env.example
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '3004:3004'
+
+  audit-writer:
+    build:
+      context: .
+      dockerfile: services/audit-writer/Dockerfile
+    env_file:
+      - services/audit-writer/.env.example
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - '3003:3003'

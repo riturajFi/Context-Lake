@@ -1,0 +1,29 @@
+name: Docker Images
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: ingest-api
+          - service: context-query-api
+          - service: stream-processor
+          - service: audit-writer
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.service }} image
+        run: |
+          docker build \
+            -f services/${{ matrix.service }}/Dockerfile \
+            -t context-lake/${{ matrix.service }}:${{ github.sha }} \
+            .
