@@ -25,6 +25,9 @@ This document summarizes the current architecture. It does not claim that the lo
 - `audit-writer`
   - Consumes `audit-events` and selected `agent-events`.
   - Persists append-only audit rows for compliance review and traceability.
+- `presentation-web`
+  - Serves a demo-ready frontend for walkthroughs and architecture reviews.
+  - Aggregates local service liveness and readiness into a single presentable screen.
 
 ## Shared Packages
 

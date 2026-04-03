@@ -21,6 +21,7 @@ services/
   context-query-api/
   stream-processor/
   audit-writer/
+  presentation-web/
 packages/
   shared-config/
   shared-db/
@@ -48,6 +49,9 @@ docs/
   - low-latency read API over materialized views
 - `audit-writer`
   - immutable audit log persistence from Kafka
+- `presentation-web`
+  - demo-ready frontend for presenting the platform
+  - aggregates local service readiness into a single UI
 
 ## Local Stack
 
@@ -80,6 +84,7 @@ pnpm dev
 - `context-query-api`: `3002`
 - `audit-writer` admin: `3003`
 - `stream-processor` admin: `3004`
+- `presentation-web`: `3010`
 - `grafana`: `3005`
 - `kafka-ui`: `8080`
 - `prometheus`: `9090`
@@ -109,6 +114,11 @@ Metrics:
 - `GET http://localhost:3002/metrics`
 - `GET http://localhost:3003/metrics`
 - `GET http://localhost:3004/metrics`
+
+Presentation UI:
+
+- `GET http://localhost:3010`
+- `GET http://localhost:3010/api/runtime`
 
 ## Developer Commands
 

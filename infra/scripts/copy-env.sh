@@ -7,6 +7,7 @@ services=(
   "services/context-query-api"
   "services/stream-processor"
   "services/audit-writer"
+  "services/presentation-web"
 )
 
 cp ".env.example" ".env"

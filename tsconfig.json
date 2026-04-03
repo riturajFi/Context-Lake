@@ -11,6 +11,7 @@
     { "path": "./services/ingest-api" },
     { "path": "./services/context-query-api" },
     { "path": "./services/stream-processor" },
-    { "path": "./services/audit-writer" }
+    { "path": "./services/audit-writer" },
+    { "path": "./services/presentation-web" }
   ]
 }
